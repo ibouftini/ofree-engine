@@ -2,7 +2,7 @@
 // builds the formats the documents use. Network access happens only when
 // something is missing.
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import type { Engine } from "../plan/scan.js";
 import { Mutex, run, seconds } from "../util/exec.js";
@@ -32,6 +32,8 @@ export class TexLive {
   log: (message: string) => void = () => undefined;
   /** Font folders outside TeX Live (the repository's fonts), for fontconfig and LuaTeX. */
   extraFontDirs: string[] = [];
+  /** Folders TeX searches before TeX Live (files written for this run only). */
+  extraTexInputs: string[] = [];
 
   private installed = new Set<string>();
   private db?: Tlpdb;
@@ -84,6 +86,8 @@ export class TexLive {
       error_line: "254",
       half_error_line: "238",
     };
+    // A trailing separator keeps TeX Live's own search path after these folders.
+    if (this.extraTexInputs.length) env.TEXINPUTS = [...this.extraTexInputs, process.env.TEXINPUTS ?? ""].join(delimiter);
     // LuaTeX (luaotfload) and kpathsea look for fonts outside TeX Live in OSFONTDIR.
     if (this.extraFontDirs.length) env.OSFONTDIR = [...this.extraFontDirs, process.env.OSFONTDIR].filter(Boolean).join(delimiter);
     if (existsSync(this.fontconfigFile())) env.FONTCONFIG_FILE = this.fontconfigFile();
@@ -119,6 +123,35 @@ export class TexLive {
     if (this.changed || readdirSync(cacheDir).length === 0) {
       await run("fc-cache", dirs.filter((d) => existsSync(d)), { env: this.env() });
     }
+  }
+
+  /**
+   * XeTeX on macOS finds fonts by name through CoreText, not fontconfig, so
+   * TeX Live's fonts and the repository's are linked into ~/Library/Fonts,
+   * where CoreText looks. Hard links cost nothing; copies are the fallback.
+   */
+  exposeFontsToMacOS(home: string): number {
+    const target = join(home, "Library", "Fonts", "ofree-engine");
+    mkdirSync(target, { recursive: true });
+    let count = 0;
+    const walk = (dir: string) => {
+      if (!existsSync(dir)) return;
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (/\.(otf|ttf|ttc)$/i.test(e.name) && !existsSync(join(target, e.name))) {
+          try {
+            linkSync(full, join(target, e.name));
+          } catch {
+            copyFileSync(full, join(target, e.name));
+          }
+          count++;
+        }
+      }
+    };
+    for (const d of ["opentype", "truetype"]) walk(join(this.texdir, "texmf-dist", "fonts", d));
+    for (const d of this.extraFontDirs) walk(d);
+    return count;
   }
 
   private manifestPath() {

@@ -91,7 +91,7 @@ function debianName(pkg: string): string {
 }
 
 /** Programs documents run that TeX Live does not ship, and the Ubuntu package that has them. */
-const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript" };
+const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript", inkscape: "inkscape", gnuplot: "gnuplot-nox" };
 
 async function installSystemPackages(pkgs: string[]) {
   core.info(`Installing system packages: ${pkgs.join(" ")}`);
@@ -195,14 +195,18 @@ async function main() {
   phases.plan = seconds(t);
 
   // 2. Provision TeX Live: cache first, network only for what is missing.
-  // Ghostscript (for EPS images) is not on GitHub's runners; install it alongside.
+  // Programs outside TeX Live (Ghostscript for EPS, Inkscape, gnuplot) are
+  // not on GitHub's runners; install the ones a document needs alongside.
   t = performance.now();
-  const eps = docs.find((d) => d.eps);
-  const ghostscript =
-    eps && (await run("gs", ["--version"])).code !== 0
-      ? (core.info(`${eps.root}: EPS image (${eps.eps!.file}:${eps.eps!.line}) needs Ghostscript; installing it alongside TeX Live`),
-        installSystemPackages(["ghostscript"]))
-      : Promise.resolve();
+  const needed = new Map<string, string>();
+  for (const d of docs) for (const [program, why] of d.systemPrograms) if (!needed.has(program)) needed.set(program, `${why.reason} (${why.file}:${why.line})`);
+  const absent = [];
+  for (const [program, why] of needed) {
+    if (!SYSTEM_PROGRAMS[program] || (await run(program, ["--version"])).code === 0) continue;
+    core.info(`Installing ${SYSTEM_PROGRAMS[program]} alongside TeX Live: ${why}`);
+    absent.push(SYSTEM_PROGRAMS[program]);
+  }
+  const systemInstall = absent.length ? installSystemPackages(absent) : Promise.resolve();
   const arch = texliveArch();
   const texdir = process.env.OFREE_TEXDIR ?? join(homedir(), ".ofree", "texlive");
   const work = join(process.env.RUNNER_TEMP ?? tmpdir(), "ofree");
@@ -243,6 +247,14 @@ async function main() {
   const microsoftFonts = core.getInput("microsoft_fonts") !== "false";
   const named = [...new Set(docs.flatMap((d) => [...d.fonts.keys()]))].filter(providable);
   const fontOutcomes: FontOutcome[] = await fonts.provide(named, microsoftFonts);
+  if (docs.some((d) => d.ctexWindows)) {
+    const overrides = join(work, "texinputs");
+    const ctex = await fonts.ctexWindows(overrides);
+    if (ctex) {
+      tl.extraTexInputs = [overrides];
+      fontOutcomes.push(ctex);
+    }
+  }
   for (const f of fontOutcomes.filter((f) => f.source === "substitute")) {
     core.warning(`"${f.name}" cannot be downloaded, so ${f.family} is used instead. ${f.note ?? ""} To use ${f.name} itself, add its font files to the repository.`, { title: `Font ${f.name} replaced by ${f.family}` });
   }
@@ -250,7 +262,7 @@ async function main() {
   core.info(`Formats and fonts ready in ${seconds(s)} s`);
   phases.provision = seconds(t);
 
-  await ghostscript;
+  await systemInstall;
 
   // keep_warm: a scheduled run that only keeps the cached TeX Live alive.
   // GitHub drops cache entries unused for 7 days; restoring one counts as use.

@@ -51,6 +51,11 @@ add_cus_dep('nlo', 'nls', 0, 'ofree_makenomenclature');
 sub ofree_makenomenclature {
   return system('makeindex', "$_[0].nlo", '-s', 'nomencl.ist', '-o', "$_[0].nls", '-t', "$_[0].nlg");
 }
+# asymptote: asy compiles the figures the asymptote package writes to .asy files.
+add_cus_dep('asy', 'eps', 0, 'ofree_asy');
+add_cus_dep('asy', 'pdf', 0, 'ofree_asy');
+add_cus_dep('asy', 'tex', 0, 'ofree_asy');
+sub ofree_asy { return system("asy -o \"$_[0]\" \"$_[0]\""); }
 push @generated_exts, qw(glo gls glg acn acr alg slo sls slg glstex nlo nls nlg ist xdy);
 `;
 

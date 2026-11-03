@@ -1,0 +1,37 @@
+% Programs outside TeX Live, each used the way papers and theses use them:
+% an SVG figure (Inkscape), a pgfplots contour computed by gnuplot, an
+% Asymptote figure (asy, then Ghostscript), code highlighted by minted
+% (Python), and TikZ externalization. All of them need shell escape or a
+% build step between LaTeX runs.
+\documentclass{article}
+\usepackage{svg}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{asymptote}
+\usepackage{minted}
+\usetikzlibrary{external}
+\tikzexternalize[prefix=tikz-cache/]
+\begin{document}
+\section{SVG}
+\includesvg[width=4cm]{figures/logo}
+
+\section{gnuplot}
+\begin{tikzpicture}
+  \begin{axis}[view={0}{90}, width=6cm]
+    \addplot3[contour gnuplot={levels={0.2,0.5,0.8}}, thick] {exp(-x^2-y^2)};
+  \end{axis}
+\end{tikzpicture}
+
+\section{Asymptote}
+\begin{asy}
+size(4cm);
+draw(unitcircle, blue);
+fill(scale(0.5)*unitsquare, red);
+\end{asy}
+
+\section{minted}
+\begin{minted}{python}
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+\end{minted}
+\end{document}

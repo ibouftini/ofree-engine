@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots","programs"]') }}
         cache: [true, false]
     steps:
       - uses: actions/checkout@v5
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots","programs"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: xu-cheng/latex-action@v4
@@ -54,6 +54,7 @@ jobs:
           working_directory: bench/samples/${{ matrix.doc }}
           latexmk_use_xelatex: ${{ contains(fromJSON('["arabic","cv","chinese","urdu","fonts"]'), matrix.doc) }}
           latexmk_use_lualatex: ${{ contains(fromJSON('["lua","bidi"]'), matrix.doc) }}
+          latexmk_shell_escape: ${{ matrix.doc == 'programs' }}
 
   results:
     needs: [ours, incumbent]

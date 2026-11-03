@@ -39,6 +39,10 @@ export interface DocumentPlan {
   shellEscape: Ref & { reason: string } | null;
   /** An EPS image: converting it needs Ghostscript, whatever the engine. */
   eps: Ref | null;
+  /** ctex with fontset=windows, which names Windows fonts (SimSun, SimHei, ...) that Linux does not have. */
+  ctexWindows: Ref | null;
+  /** Programs outside TeX Live the document runs (gs, inkscape, gnuplot), with why. */
+  systemPrograms: Map<string, Ref & { reason: string }>;
   /** False for documents built alongside the main ones (drafts, figures): their failures are warnings. */
   main: boolean;
   /** Every source file read for this document, relative to the workspace. */
@@ -287,6 +291,8 @@ interface Accumulator {
   bibtex: Ref | null;
   shellEscape: (Ref & { reason: string }) | null;
   hasEps: Ref | null;
+  systemPrograms: Map<string, Ref & { reason: string }>;
+  ctexWindows: Ref | null;
   /** Folders from \graphicspath, relative to the compile directory. */
   graphicsPaths: string[];
   /** Font encodings that use cm-super with Computer Modern (t1, t2a, ...). */
@@ -305,6 +311,14 @@ const CM_REPLACEMENTS = new Set([
 function addOnce(map: Map<string, Ref>, key: string, ref: Ref) {
   if (!map.has(key)) map.set(key, ref);
 }
+
+/** Packages that run a program TeX Live does not ship (installed from the system's packages). */
+const SYSTEM_PROGRAM_PACKAGES: Record<string, [string, string]> = {
+  svg: ["inkscape", "the svg package converts SVG files with Inkscape"],
+  gnuplottex: ["gnuplot", "gnuplottex runs gnuplot"],
+  asymptote: ["gs", "Asymptote converts its figures with Ghostscript"],
+  "auto-pst-pdf": ["gs", "auto-pst-pdf converts PostScript with Ghostscript"],
+};
 
 const SHELL_ESCAPE_PACKAGES: Record<string, string> = {
   minted: "minted runs Python to highlight code",
@@ -368,6 +382,7 @@ function scanText(
           if (sm[1] !== "bibstyle") addOnce(acc.requires, style + ".cbx", r);
         }
       }
+      if (/^ctex/.test(name) && /\bfontset\s*=\s*windows\b/.test(options)) acc.ctexWindows ??= r;
       if (name === "fontenc") {
         // Each encoding needs its definition file; Computer Modern in T1 or
         // Cyrillic encodings needs cm-super for vector (not bitmap) fonts.
@@ -377,6 +392,10 @@ function scanText(
           if (e !== "ot1" && e !== "t1") addOnce(acc.requires, `${e}enc.def`, r);
           if (/^(t1|ts1|t2a|t2b|t2c|x2)$/.test(e)) acc.encodings.set(e, r);
         }
+      }
+      if (name in SYSTEM_PROGRAM_PACKAGES) {
+        const [program, reason] = SYSTEM_PROGRAM_PACKAGES[name];
+        if (!acc.systemPrograms.has(program)) acc.systemPrograms.set(program, { ...r, reason });
       }
       if (name in SHELL_ESCAPE_PACKAGES && SHELL_ESCAPE_PACKAGES[name] && !acc.shellEscape) {
         acc.shellEscape = { ...r, reason: SHELL_ESCAPE_PACKAGES[name] };
@@ -392,6 +411,7 @@ function scanText(
     addOnce(acc.packages, name, r);
     addOnce(acc.requires, name + ".cls", r);
     acc.classes.push({ name, options: splitNames(m[1] ?? "").map((o) => o.toLowerCase()), ref: r });
+    if (/^ctex/.test(name) && /\bfontset\s*=\s*windows\b/.test(m[1] ?? "")) acc.ctexWindows ??= r;
     // Global class options are passed to babel as languages; keep plausible ones.
     for (const opt of splitNames(m[1] ?? "")) {
       if (/^[a-z]{4,}$/.test(opt) && !/^(draft|final|twoside|oneside|landscape|portrait|onecolumn|twocolumn|titlepage|notitlepage|openright|openany|fleqn|leqno|handout|aspectratio|compress|serif|sans|journal|conference|letterpaper|legalpaper|executivepaper|english|american|british)$/.test(opt)) {
@@ -463,7 +483,15 @@ function scanText(
   }
   if (!acc.shellEscape) {
     const w = /\\(?:immediate\s*)?\\write18\b|\\ShellEscape\b/.exec(text);
+    const ext = /\\tikzexternalize\b/.exec(text);
+    if (ext && !w) acc.shellEscape = { ...ref(ext.index), reason: "TikZ externalization compiles each picture on its own" };
     if (w) acc.shellEscape = { ...ref(w.index), reason: "the document runs shell commands (\\write18)" };
+  }
+  // pgfplots plots computed by gnuplot ("\addplot gnuplot {...}", "contour gnuplot") need it and shell escape.
+  const gp = /\\addplot3?\+?\s*(?:\[[^\]]*\])?\s*gnuplot\b|\bcontour gnuplot\b|\braw gnuplot\b/.exec(text);
+  if (gp) {
+    if (!acc.systemPrograms.has("gnuplot")) acc.systemPrograms.set("gnuplot", { ...ref(gp.index), reason: "pgfplots computes this plot with gnuplot" });
+    if (!acc.shellEscape) acc.shellEscape = { ...ref(gp.index), reason: "pgfplots runs gnuplot" };
   }
   for (const m of text.matchAll(/\\graphicspath\s*\{((?:\s*\{[^}]*\})+)\s*\}/g)) {
     for (const d of m[1].matchAll(/\{([^}]*)\}/g)) acc.graphicsPaths.push(d[1]);
@@ -574,6 +602,8 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     bibtex: null,
     shellEscape: null,
     hasEps: null,
+    systemPrograms: new Map(),
+    ctexWindows: null,
     graphicsPaths: [],
     encodings: new Map(),
     sources: [],
@@ -662,6 +692,10 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     bibTool,
     shellEscape: acc.shellEscape,
     eps: acc.hasEps,
+    ctexWindows: acc.ctexWindows,
+    systemPrograms: acc.hasEps && !acc.systemPrograms.has("gs")
+      ? new Map([...acc.systemPrograms, ["gs", { ...acc.hasEps, reason: "EPS images are converted with Ghostscript" }]])
+      : acc.systemPrograms,
     sources: acc.sources,
     main: true,
   };

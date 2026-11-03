@@ -26,14 +26,27 @@ export interface FontOutcome {
 
 const METRIC_NOTE = "It has the same character widths, so lines and pages break the same way, but the letters look slightly different.";
 
-/** Fonts TeX Live does not have, with a TeX Live font of the same design. */
-const TEXLIVE_SUBSTITUTES: Record<string, { family: string; file: string }> = {
-  ipamincho: { family: "IPAex Mincho", file: "ipaexm.ttf" },
-  ipapmincho: { family: "IPAex Mincho", file: "ipaexm.ttf" },
-  ipagothic: { family: "IPAex Gothic", file: "ipaexg.ttf" },
-  ipapgothic: { family: "IPAex Gothic", file: "ipaexg.ttf" },
-};
 const IPA_NOTE = "IPAex has the same Japanese characters as the IPA fonts; only Latin letters are spaced proportionally.";
+const FANDOL_NOTE = "Fandol fonts are of the same styles (Song, Hei, Kai, Fang) and cover the same Chinese characters, but the letters look different.";
+const fandol = (style: string, bold = false) => ({
+  family: `Fandol${style}`,
+  files: { Regular: `Fandol${style}-Regular.otf`, ...(bold ? { Bold: `Fandol${style}-Bold.otf` } : {}) },
+  note: FANDOL_NOTE,
+});
+const ipaex = (style: "Mincho" | "Gothic") => ({ family: `IPAex ${style}`, files: { Regular: style === "Mincho" ? "ipaexm.ttf" : "ipaexg.ttf" }, note: IPA_NOTE });
+
+/**
+ * Fonts TeX Live does not have, with a TeX Live font that stands in for them:
+ * the IPA fonts (IPAex), and the Windows Chinese fonts ctex's fontset=windows
+ * names, by family and by file (Fandol).
+ */
+const TEXLIVE_SUBSTITUTES: Record<string, { family: string; files: Record<string, string>; note: string }> = {
+  ipamincho: ipaex("Mincho"), ipapmincho: ipaex("Mincho"), ipagothic: ipaex("Gothic"), ipapgothic: ipaex("Gothic"),
+  simsun: fandol("Song", true), nsimsun: fandol("Song", true), "simsun.ttc": fandol("Song", true),
+  simhei: fandol("Hei", true), "simhei.ttf": fandol("Hei", true), microsoftyahei: fandol("Hei", true), "msyh.ttc": fandol("Hei", true), "msyh.ttf": fandol("Hei", true),
+  kaiti: fandol("Kai"), "simkai.ttf": fandol("Kai"), fangsong: fandol("Fang"), "simfang.ttf": fandol("Fang"),
+};
+
 
 /** Microsoft's core fonts for the web: installer name and the SHA-256 that Ubuntu's ttf-mscorefonts-installer checks. */
 const MICROSOFT: Record<string, [string, string]> = {
@@ -160,6 +173,32 @@ export class Fonts {
     return (await this.families()).has(name.toLowerCase());
   }
 
+  /**
+   * ctex's fontset=windows loads SimSun, SimHei, KaiTi, FangSong and Microsoft
+   * YaHei, partly through options (BoldFont = SimHei) that a feature file
+   * cannot redirect. Without those fonts, a ctex-fontset-windows.def that
+   * loads ctex's Fandol set is written to `dir`, which TeX searches first.
+   */
+  async ctexWindows(dir: string): Promise<FontOutcome | undefined> {
+    if (await this.available("SimSun")) return undefined;
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "ctex-fontset-windows.def"),
+      [
+        "% Written by ofree-engine: the Windows fonts are not available on this",
+        "% machine, so ctex's fontset=windows uses the Fandol fonts from TeX Live.",
+        "\\ProvidesExplFile{ctex-fontset-windows.def}{2026/11/04}{0}{Windows font set, with Fandol fonts}",
+        "\\file_input:n { ctex-fontset-fandol.def }",
+        "\\cs_if_exist:NF \\lishu { \\NewDocumentCommand \\lishu { } { \\CJKfamily { zhkai } } }",
+        "\\cs_if_exist:NF \\youyuan { \\NewDocumentCommand \\youyuan { } { \\CJKfamily { zhhei } } }",
+        "\\cs_if_exist:NF \\yahei { \\NewDocumentCommand \\yahei { } { \\CJKfamily { zhhei } } }",
+        "",
+      ].join("\n"),
+    );
+    this.log("ctex fontset=windows: the Windows fonts are not available; using the Fandol fonts");
+    return { name: "SimSun, SimHei, KaiTi, FangSong (ctex fontset=windows)", source: "substitute", family: "Fandol", note: FANDOL_NOTE };
+  }
+
   /** Makes each font available if it is not yet, and says where it came from. */
   async provide(names: string[], microsoft: boolean): Promise<FontOutcome[]> {
     const out: FontOutcome[] = [];
@@ -197,10 +236,10 @@ export class Fonts {
       }
     };
     const tl = TEXLIVE_SUBSTITUTES[key.replace(/\s+/g, "")];
-    if (tl && (await run("kpsewhich", [tl.file], { env: this.env() })).code === 0) {
-      this.alias(name, { Regular: tl.file });
+    if (tl && (await run("kpsewhich", [tl.files.Regular], { env: this.env() })).code === 0) {
+      this.alias(name, tl.files);
       this.log(`Font "${name}": not in TeX Live, using ${tl.family}`);
-      return { name, source: "substitute", family: tl.family, note: IPA_NOTE };
+      return { name, source: "substitute", family: tl.family, note: tl.note };
     }
     const family = googleFamily(name);
     const files = await attempt("Google Fonts", () => this.google(family));
