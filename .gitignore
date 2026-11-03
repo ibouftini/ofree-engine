@@ -1,0 +1,11 @@
+node_modules/
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.out
+*.pdf

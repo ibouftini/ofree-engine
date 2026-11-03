@@ -1,0 +1,42 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{refs.bib}
+\usepackage{hyperref}
+
+\title{A small benchmark paper}
+\author{ofree-engine}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Mass--energy equivalence, $E = mc^2$, appears in \cite{einstein1905}.
+Table~\ref{tab:constants} lists one constant, typeset with \texttt{siunitx}.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lS[table-format=9.0]}
+    \toprule
+    Quantity & {Value (\si{\metre\per\second})} \\
+    \midrule
+    Speed of light & 299792458 \\
+    \bottomrule
+  \end{tabular}
+  \caption{A physical constant.}
+  \label{tab:constants}
+\end{table}
+
+Gauss's law in differential form:
+\begin{align}
+  \nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} \label{eq:gauss}
+\end{align}
+Equation~\eqref{eq:gauss} is typeset following \cite{knuth1984}.
+
+\printbibliography
+\end{document}
