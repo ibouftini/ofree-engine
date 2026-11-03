@@ -38,6 +38,19 @@ def latex_steps(workflow):
                 yield step
 
 
+def checkout_path(workflow):
+    """Where the job that runs the latex step checks the repository out (with: path)."""
+    for job in (workflow.get("jobs") or {}).values():
+        steps = job.get("steps") or []
+        if not any(str(s.get("uses", "")).startswith("xu-cheng/latex-action@") for s in steps):
+            continue
+        for s in steps:
+            w = s.get("with") or {}
+            if str(s.get("uses", "")).startswith("actions/checkout@") and "repository" not in w and w.get("path"):
+                return str(w["path"])
+    return None
+
+
 def entry_for(repo, wf_name):
     meta = json.loads(gh(f"repos/{repo}"))
     branch = meta["default_branch"]
@@ -59,7 +72,11 @@ def entry_for(repo, wf_name):
     for k, v in inputs.items():
         clean[k] = ("true" if v else "false") if isinstance(v, bool) else str(v)
     ident = re.sub(r"[^a-z0-9]+", "-", repo.lower()).strip("-")
-    return {"id": ident, "repo": repo, "sha": sha, "with": clean}, None
+    entry = {"id": ident, "repo": repo, "sha": sha, "with": clean}
+    path = checkout_path(workflow)
+    if path:
+        entry["checkout_path"] = path
+    return entry, None
 
 
 def yaml_with(inputs, indent):
@@ -107,6 +124,8 @@ def workflow(entries):
                 f"          ref: {e['sha']}",
                 "          submodules: recursive",
             ]
+            if e.get("checkout_path"):
+                out.append(f"          path: {e['checkout_path']}")
             if variant == "incumbent":
                 out.append("      - uses: xu-cheng/latex-action@v4")
             else:

@@ -6,7 +6,8 @@
   "with": {
    "working_directory": "book",
    "root_file": "book.tex"
-  }
+  },
+  "checkout_path": "book"
  },
  {
   "id": "blockstreamresearch-zk-book",

@@ -24,6 +24,7 @@ jobs:
           repository: assumptionsofphysics/book
           ref: 7290c7ed03c48d2fb644a3dab0c274428ee57dc2
           submodules: recursive
+          path: book
       - uses: xu-cheng/latex-action@v4
         with:
           working_directory: "book"
@@ -40,6 +41,7 @@ jobs:
           repository: assumptionsofphysics/book
           ref: 7290c7ed03c48d2fb644a3dab0c274428ee57dc2
           submodules: recursive
+          path: book
       - uses: actions/checkout@v5
         with:
           path: .ofree-engine
