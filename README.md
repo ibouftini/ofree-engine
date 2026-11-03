@@ -19,7 +19,7 @@ jobs:
 Nothing else is needed. The action:
 
 - **Finds the documents itself:** every `.tex` file with `\documentclass` that no other file includes.
-- **Picks the engine** (pdfLaTeX, XeLaTeX or LuaLaTeX) from `% !TeX program`, `.latexmkrc` or the packages used, and says why.
+- **Picks the engine** (pdfLaTeX, XeLaTeX, LuaLaTeX, or pLaTeX and upLaTeX for Japanese) from `% !TeX program`, `.latexmkrc`, the class or the packages used, and says why. A `.latexmkrc` keeps its own route (upLaTeX then dvipdfmx, for example).
 - **Installs only what the documents need:** the TeX Live packages, languages and fonts it reads from the sources. Anything still missing while compiling is installed and the document retried.
 - **Finds fonts that are not in TeX Live:** font files in the repository are used as they are, by name. Other fonts are downloaded from Google Fonts, and Microsoft's core fonts (Arial, Times New Roman, Courier New, Georgia, Verdana, …) from Microsoft, under Microsoft's licence for them. Calibri and Cambria cannot be downloaded: Carlito and Caladea, which have the same character widths (so the same line and page breaks), stand in for them, with a warning.
 - **Keeps that TeX Live in the Actions cache,** so later runs start in seconds.
@@ -64,6 +64,16 @@ The most-used LaTeX action, `xu-cheng/latex-action`, downloads a 2.3 GiB TeX Liv
 - **The timing figures** come from a full run on this corpus.
 - **Timings come from a run where most repositories had a cached TeX Live from an earlier run,** as they would in daily use.
 - **The whole-job figures include `actions/checkout`,** which takes minutes for some large repositories.
+
+**Japanese templates.** Ten Japanese thesis and report templates from university labs and students (Kyoto, Tokyo Tech, Tsukuba, Kochi, …) were built with nothing but their root file, both ways. They cover pLaTeX and upLaTeX through their `.latexmkrc`, `jsbook` without one, LuaLaTeX-ja, and `bxjsarticle`. Measured 2026-11-03:
+
+| | xu-cheng/latex-action@v4 | This action |
+|---|---:|---:|
+| Templates built | 2 / 10 | 10 / 10 |
+| Build step, with a cached TeX Live, median | 79 s (the two it builds) | 12 s |
+| Build step, first run, range | | 24–48 s |
+
+`xu-cheng/latex-action` passes `-pdf`, which overrides the templates' `.latexmkrc`. The PDFs embed the HaranoAji fonts; Ghostscript, which the runners lack, is installed for the one template with EPS figures.
 
 On the samples in [`bench/samples`](bench/samples), build step only (one run, 2026-11-03; the incumbent's time varies between 60 and 120 s from run to run):
 
