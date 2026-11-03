@@ -1,0 +1,39 @@
+name: Spike · cache contents
+
+# What the cached TeX Live holds, and how big each part is once compressed
+# the way @actions/cache compresses it (tar + zstd).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    name: inspect · ${{ matrix.doc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        doc: [paper, lua]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/${{ matrix.doc }}
+          cache: false
+          upload: false
+      - name: Sizes
+        run: |
+          cd ~/.ofree/texlive
+          {
+            echo "### ${{ matrix.doc }}"
+            echo '```'
+            echo "files: $(find . -type f | wc -l)"
+            echo "whole tree compressed (zstd -3): $(tar -cf - . | zstd -T0 -3 -q | wc -c | numfmt --to=iec)"
+            echo "--- uncompressed, largest folders (depth 3)"
+            du -h --max-depth=3 . | sort -rh | head -25
+            echo "--- each top folder compressed"
+            for d in $(find . -mindepth 1 -maxdepth 2 -type d); do printf '%8s  %s\n' "$(tar -cf - "$d" | zstd -T0 -3 -q | wc -c | numfmt --to=iec)" "$d"; done | sort -rh | head -20
+            echo "--- largest files"
+            find . -type f -printf '%s %p\n' | sort -rn | head -20 | numfmt --to=iec --field=1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
