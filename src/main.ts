@@ -4,7 +4,7 @@ import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
 import { copyFileSync, existsSync, globSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, homedir, tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
 import { compileAll, EXTRA_LATEXMKRC, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
@@ -157,7 +157,10 @@ function metafontKit(font: string): string[] {
 async function main() {
   const phases: Record<string, number> = {};
   let t = performance.now();
-  const workspace = resolve(process.env.GITHUB_WORKSPACE ?? process.cwd(), core.getInput("working_directory") || ".");
+  const repository = process.env.GITHUB_WORKSPACE ?? process.cwd();
+  const workspace = resolve(repository, core.getInput("working_directory") || ".");
+  // Annotations and links name files relative to the repository.
+  const prefix = relative(repository, workspace).split(sep).join("/");
   mkdirSync(workspace, { recursive: true });
   for (const ignored of ["docker_image", "os"]) {
     if (core.getInput(ignored)) core.notice(`Input '${ignored}' is ignored: this action installs TeX Live directly, without Docker.`);
@@ -281,7 +284,7 @@ async function main() {
   const results = await compileAll(workspace, docs, opts, () => tl.env(), recovery);
   phases.compile = seconds(t);
   for (const r of results) {
-    core.info(digestText(r));
+    core.info(digestText(r, prefix));
     core.startGroup(`${r.doc.root}: full log`);
     core.info(`--- ${r.doc.root}: build program output (end) ---\n${r.runOutput.slice(-20_000)}`);
     core.info(`--- ${r.doc.root}: engine log (end) ---\n${r.output.slice(r.runOutput.length).slice(-20_000)}`);
@@ -309,11 +312,12 @@ async function main() {
     }
   }
   phases.publish = seconds(t);
-  annotate(results, onError);
+  annotate(results, onError, prefix);
   if (process.env.GITHUB_STEP_SUMMARY) {
     await core.summary
       .addRaw(
         summaryMarkdown({
+          prefix,
           results,
           phases,
           provisionedFrom,

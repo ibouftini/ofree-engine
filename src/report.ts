@@ -1,11 +1,14 @@
 // The build summary (what users read) and file/line annotations.
 
 import * as core from "@actions/core";
+import { posix } from "node:path";
 import { ENGINE_NAME, type DocumentResult } from "./compile/compile.js";
 import type { Issue } from "./compile/diagnose.js";
 import type { Resolution } from "./plan/resolve.js";
 
 export interface RunFacts {
+  /** The working directory relative to the repository ("" for its root). */
+  prefix: string;
   results: DocumentResult[];
   phases: Record<string, number>;
   provisionedFrom: string;
@@ -24,7 +27,7 @@ const code = (s: string) => (s.includes("`") ? `\`\` ${s.replace(/\n/g, " ")} \`
 const plain = (s: string) => s.replace(/\*\*/g, "");
 
 /** Path of a file the log names (relative to the compile directory), relative to the repository. */
-const repoPath = (r: DocumentResult, file: string) => (r.doc.cwd === "." ? file : `${r.doc.cwd}/${file}`);
+const repoPath = (r: DocumentResult, file: string, prefix: string) => posix.normalize(posix.join(prefix || ".", r.doc.cwd, file));
 
 function sourceLink(path: string, line?: number): string {
   const label = code(line ? `${path}:${line}` : path);
@@ -40,31 +43,31 @@ function describe(e: Issue): string {
 }
 
 /** Errors become workflow annotations on the file and line (warnings when the step is not to fail on them). */
-export function annotate(results: DocumentResult[], onError: "fail" | "warn" = "fail") {
+export function annotate(results: DocumentResult[], onError: "fail" | "warn", prefix: string) {
   for (const r of results) {
     if (r.status === "ok") continue;
     const report = r.status === "errors" && onError === "warn" ? core.warning : core.error;
     const errors = r.diagnosis.errors.slice(0, 10);
     if (errors.length === 0) {
-      report(`${r.doc.root} could not be built. See the log of this step for details.`, { file: r.doc.root });
+      report(`${r.doc.root} could not be built. See the log of this step for details.`, { file: posix.join(prefix || ".", r.doc.root) });
       continue;
     }
     for (const e of errors) {
       const text = describe(e) + (e.hint ? `\n${plain(e.hint)}` : "");
-      const file = e.file ? repoPath(r, e.file) : r.doc.root;
+      const file = e.file ? repoPath(r, e.file, prefix) : posix.join(prefix || ".", r.doc.root);
       report(text, { title: `LaTeX error in ${r.doc.root}`, file, startLine: e.file ? e.lines[0] : undefined });
     }
   }
 }
 
 /** The same digest as the summary, as plain text for the step's log. */
-export function digestText(r: DocumentResult): string {
+export function digestText(r: DocumentResult, prefix: string): string {
   const d = r.diagnosis;
   const out: string[] = [];
   const head = r.status === "ok" ? "built" : r.status === "errors" ? `PDF built through ${d.errors.length} LaTeX error(s)` : "could not be built";
   out.push(`${r.doc.root}: ${head}`);
   for (const e of d.errors.slice(0, 15)) {
-    const where = e.file ? `${repoPath(r, e.file)}:${e.lines.join(",")}` : e.source ? `(${e.source})` : "";
+    const where = e.file ? `${repoPath(r, e.file, prefix)}:${e.lines.join(",")}` : e.source ? `(${e.source})` : "";
     out.push(`  ✗ ${where} ${describe(e)}`.trimEnd());
     if (e.hint) out.push(`      ${plain(e.hint)}`);
   }
@@ -74,7 +77,7 @@ export function digestText(r: DocumentResult): string {
   return out.join("\n");
 }
 
-function documentSection(r: DocumentResult): string[] {
+function documentSection(r: DocumentResult, prefix: string): string[] {
   const d = r.diagnosis;
   const lines: string[] = [];
   const n = d.errors.length;
@@ -82,7 +85,7 @@ function documentSection(r: DocumentResult): string[] {
     lines.push(`### ${code(r.doc.root)}: ${r.status === "errors" ? `PDF built through ${n} error${n === 1 ? "" : "s"}` : "no PDF"}`, "");
     if (n === 0) lines.push("No LaTeX error message was found; see the log of this step.", "");
     d.errors.slice(0, 10).forEach((e, i) => {
-      const where = e.file ? sourceLink(repoPath(r, e.file), e.lines[0]) + (e.lines.length > 1 ? ` (also line${e.lines.length > 2 ? "s" : ""} ${e.lines.slice(1, 6).join(", ")})` : "") : e.source ? `in ${code(e.source)}` : "";
+      const where = e.file ? sourceLink(repoPath(r, e.file, prefix), e.lines[0]) + (e.lines.length > 1 ? ` (also line${e.lines.length > 2 ? "s" : ""} ${e.lines.slice(1, 6).join(", ")})` : "") : e.source ? `in ${code(e.source)}` : "";
       lines.push(`${i + 1}. ${where}${where ? " — " : ""}**${esc(describe(e))}**`);
       if (e.hint) lines.push(`   <br>${esc(e.hint)}`);
     });
@@ -128,7 +131,7 @@ export function summaryMarkdown(f: RunFacts): string {
     lines.push(`| \`${esc(r.doc.root)}\` | ${engine} | ${r.pages ?? "—"} | ${result} | ${r.seconds.toFixed(1)} s |`);
   }
   lines.push("");
-  for (const r of f.results) lines.push(...documentSection(r));
+  for (const r of f.results) lines.push(...documentSection(r, f.prefix));
 
   lines.push("<details><summary>How this was built</summary>", "");
   lines.push(`- TeX Live ${f.release || "?"}: ${f.provisionedFrom}; ${f.packageCount} packages installed.`);
