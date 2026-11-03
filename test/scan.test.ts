@@ -110,6 +110,11 @@ describe("planDocument", () => {
     expect(japaneseEngine("article", [])).toBeNull();
   });
 
+  it("finds EPS images without their extension, through \\graphicspath", () => {
+    // photo has a PDF next to its EPS (used instead); plot has only an EPS, which needs Ghostscript.
+    expect(planDocument(fx("eps"), "main.tex").eps).toEqual({ file: "main.tex", line: 6 });
+  });
+
   it("scans a local class and drops it from the TeX Live requirements", () => {
     const d = planDocument(fx("localcls"), "cv.tex");
     expect(d.requires.has("mycv.cls")).toBe(false);

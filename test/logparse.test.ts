@@ -109,6 +109,11 @@ describe("parseLog", () => {
     expect(unbreakLines("short\nline")).toBe("short\nline");
   });
 
+  it("asks for Ghostscript when an EPS image cannot be converted", () => {
+    const f = parseLog('dvipdfmx:warning: Could not open conversion result "/tmp/dvipdfm-x.a06b" for image "./javassist.eps". Why?\ndvipdfmx:fatal: Image inclusion failed for "javassist.eps" (page=1).');
+    expect(f.missing).toContainEqual({ kind: "program", name: "gs" });
+  });
+
   it("asks for shell escape when minted says so", () => {
     expect(parseLog("Package minted Error: You must invoke LaTeX with the -shell-escape flag.").needsShellEscape).toBe(true);
   });

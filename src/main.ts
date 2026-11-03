@@ -80,12 +80,18 @@ function debianName(pkg: string): string {
   return pkg;
 }
 
+/** Programs documents run that TeX Live does not ship, and the Ubuntu package that has them. */
+const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript" };
+
 async function installSystemPackages(pkgs: string[]) {
   core.info(`Installing system packages: ${pkgs.join(" ")}`);
+  const install = (names: string[]) =>
+    run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", ...names], { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } });
+  // The runner's package lists are usually current enough; update only if that fails.
+  let all = await install(pkgs);
+  if (all.code === 0) return;
   await run("sudo", ["apt-get", "update", "-qq"]);
-  const all = await run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", ...pkgs], {
-    env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
-  });
+  all = await install(pkgs);
   if (all.code === 0) return;
   // One unknown name should not block the others.
   for (const p of pkgs) {
@@ -179,7 +185,14 @@ async function main() {
   phases.plan = seconds(t);
 
   // 2. Provision TeX Live: cache first, network only for what is missing.
+  // Ghostscript (for EPS images) is not on GitHub's runners; install it alongside.
   t = performance.now();
+  const eps = docs.find((d) => d.eps);
+  const ghostscript =
+    eps && (await run("gs", ["--version"])).code !== 0
+      ? (core.info(`${eps.root}: EPS image (${eps.eps!.file}:${eps.eps!.line}) needs Ghostscript; installing it alongside TeX Live`),
+        installSystemPackages(["ghostscript"]))
+      : Promise.resolve();
   const arch = texliveArch();
   const texdir = process.env.OFREE_TEXDIR ?? join(homedir(), ".ofree", "texlive");
   const work = join(process.env.RUNNER_TEMP ?? tmpdir(), "ofree");
@@ -224,6 +237,8 @@ async function main() {
   core.info(`Formats and fonts ready in ${seconds(s)} s`);
   phases.provision = seconds(t);
 
+  await ghostscript;
+
   // 3. Optional user setup (compatibility inputs).
   t = performance.now();
   const sysPkgs = core.getInput("extra_system_packages").split(/\s+/).filter(Boolean).map(debianName);
@@ -241,6 +256,11 @@ async function main() {
       const roots = new Set<string>();
       const provided: string[] = [];
       for (const m of missing) {
+        if (m.kind === "program" && SYSTEM_PROGRAMS[m.name] && (await run(m.name, ["--version"])).code !== 0) {
+          await installSystemPackages([SYSTEM_PROGRAMS[m.name]]);
+          if ((await run(m.name, ["--version"])).code === 0) provided.push(`${SYSTEM_PROGRAMS[m.name]} (system)`);
+          continue;
+        }
         if (m.kind === "language") {
           const pkgs = languagePackages(db, index, m.name).filter((p) => !tl.installedPackages().has(p));
           core.info(`Missing language ${m.name}: ${pkgs.join(", ") || "nothing to install"}`);

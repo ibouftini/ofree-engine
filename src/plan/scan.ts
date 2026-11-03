@@ -37,6 +37,8 @@ export interface DocumentPlan {
   fonts: Map<string, Ref>;
   bibTool: "biber" | "bibtex" | null;
   shellEscape: Ref & { reason: string } | null;
+  /** An EPS image: converting it needs Ghostscript, whatever the engine. */
+  eps: Ref | null;
   /** Every source file read for this document, relative to the workspace. */
   sources: string[];
 }
@@ -222,6 +224,8 @@ interface Accumulator {
   bibtex: Ref | null;
   shellEscape: (Ref & { reason: string }) | null;
   hasEps: Ref | null;
+  /** Folders from \graphicspath, relative to the compile directory. */
+  graphicsPaths: string[];
   /** Font encodings that use cm-super with Computer Modern (t1, t2a, ...). */
   encodings: Map<string, Ref>;
   sources: string[];
@@ -398,9 +402,17 @@ function scanText(
     const w = /\\(?:immediate\s*)?\\write18\b|\\ShellEscape\b/.exec(text);
     if (w) acc.shellEscape = { ...ref(w.index), reason: "the document runs shell commands (\\write18)" };
   }
-  if (!acc.hasEps) {
-    const e = /\\includegraphics\s*(?:\[[^\]]*\])?\s*\{[^}]*\.eps\}/i.exec(text);
-    if (e) acc.hasEps = ref(e.index);
+  for (const m of text.matchAll(/\\graphicspath\s*\{((?:\s*\{[^}]*\})+)\s*\}/g)) {
+    for (const d of m[1].matchAll(/\{([^}]*)\}/g)) acc.graphicsPaths.push(d[1]);
+  }
+  // EPS images, named with their extension or found as the only file for a name without one.
+  for (const m of text.matchAll(/\\includegraphics\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+    if (acc.hasEps) break;
+    const name = m[1].trim();
+    const dirs = [cwdAbs, dirname(join(workspace, fileRel)), ...acc.graphicsPaths.map((p) => resolve(cwdAbs, p))];
+    const eps = /\.e?ps$/i.test(name) ||
+      (!extname(name) && dirs.some((d) => existsSync(join(d, `${name}.eps`)) && !["pdf", "png", "jpg", "jpeg"].some((e) => existsSync(join(d, `${name}.${e}`)))));
+    if (eps) acc.hasEps = ref(m.index!);
   }
 
   // Follow includes (relative to the compile directory, then to the file's directory).
@@ -499,6 +511,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     bibtex: null,
     shellEscape: null,
     hasEps: null,
+    graphicsPaths: [],
     encodings: new Map(),
     sources: [],
     visited: new Set(),
@@ -585,6 +598,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     fonts: acc.fonts,
     bibTool,
     shellEscape: acc.shellEscape,
+    eps: acc.hasEps,
     sources: acc.sources,
   };
 }
