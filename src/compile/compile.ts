@@ -3,7 +3,7 @@
 // disabled shell escape the document requires.
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import type { DocumentPlan, Engine } from "../plan/scan.js";
 import { pool, run, seconds } from "../util/exec.js";
 import { parseLog, type LogFindings, type Missing } from "./logparse.js";
@@ -13,6 +13,22 @@ export interface CompileOptions {
   args: string[];
   shellEscape: "auto" | "always" | "never";
   concurrency: number;
+  log?: (message: string) => void;
+}
+
+/** Output directory set by -outdir/-output-directory arguments or by $out_dir in a .latexmkrc. */
+export function outputDirectory(cwd: string, args: string[]): string | null {
+  for (const a of args) {
+    const m = /^--?(?:outdir|out-dir|output-directory)=(.+)$/.exec(a);
+    if (m) return m[1];
+  }
+  for (const name of [".latexmkrc", "latexmkrc"]) {
+    const rc = join(cwd, name);
+    if (!existsSync(rc)) continue;
+    const m = /^\s*\$out_dir\s*=\s*['"]([^'"]+)['"]/m.exec(readFileSync(rc, "utf8"));
+    if (m) return m[1];
+  }
+  return null;
 }
 
 export interface Recovery {
@@ -66,13 +82,17 @@ async function attempt(
   }
   // The engine's own .log and BibTeX's .blg hold details latexmk does not repeat.
   const job = basename(doc.target).replace(/\.tex$/, "");
+  const outDir = outputDirectory(cwd, opts.args);
+  const dirs = [...new Set([outDir ? resolve(cwd, outDir) : cwd, cwd, resolve(cwd, dirname(doc.target))])];
   let output = r.output;
   for (const ext of [".log", ".blg"]) {
-    const path = join(cwd, job + ext);
-    if (existsSync(path)) output += `\n==> ${job}${ext}\n` + readFileSync(path, "latin1");
+    const path = dirs.map((d) => join(d, job + ext)).find((p) => existsSync(p));
+    if (path) output += `\n==> ${job}${ext}\n` + readFileSync(path, "latin1");
   }
-  const pdfAbs = join(cwd, job + ".pdf");
-  return { code: r.code, output, pdf: existsSync(pdfAbs) ? relative(workspace, pdfAbs) : null };
+  const written = /Output written on "?([^"\n(]+?)\.(?:pdf|xdv|dvi)"?\s*\(/g;
+  const fromLog = [...r.output.matchAll(written)].map((m) => resolve(cwd, m[1].trim() + ".pdf"));
+  const pdfAbs = [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find((p) => existsSync(p));
+  return { code: r.code, output, pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
 }
 
 export async function compileDocument(
@@ -96,10 +116,17 @@ export async function compileDocument(
     rounds++;
     last = await attempt(workspace, doc, engine, shellEscape, force, opts, env());
     findings = parseLog(last.output);
+    opts.log?.(
+      `${doc.root}: attempt ${rounds} with ${ENGINE_NAME[engine]}${shellEscape ? " (shell escape)" : ""}: exit ${last.code}, ` +
+        `pdf ${last.pdf ?? "none"}; missing [${findings.missing.map((m) => `${m.kind}:${m.name}`).join(", ")}]` +
+        (findings.needsUnicodeEngine ? `; needs ${findings.needsUnicodeEngine}` : "") +
+        (findings.needsShellEscape ? "; asks for shell escape" : ""),
+    );
     if (last.code === 0 && last.pdf) break;
 
     if (findings.missing.length > 0) {
       const got = await recovery.installMissing(findings.missing);
+      opts.log?.(`${doc.root}: installed for missing files: [${got.join(", ")}]`);
       if (got.length > 0) {
         installed.push(...got);
         notes.push(`Installed ${got.join(", ")}, found missing while compiling`);

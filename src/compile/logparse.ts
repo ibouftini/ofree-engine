@@ -21,6 +21,8 @@ export interface LogFindings {
   needsUnicodeEngine: "xelatex" | "lualatex" | null;
   needsShellEscape: boolean;
   pages: number | null;
+  /** Last "Output written on X" path (may be in an -outdir), relative to the compile directory. */
+  outputFile: string | null;
 }
 
 const uniq = <T>(items: T[], key: (t: T) => string) => {
@@ -35,11 +37,16 @@ export function parseLog(output: string): LogFindings {
   for (const m of output.matchAll(/LaTeX Error: File [`'‘]([^'’]+)['’] not found/g)) missing.push({ kind: "file", name: m[1] });
   for (const m of output.matchAll(/! I can't find file [`'‘]([^'’]+)['’]/g)) missing.push({ kind: "file", name: m[1] });
   for (const m of output.matchAll(/I couldn't open style file (\S+\.bst)/g)) missing.push({ kind: "file", name: m[1] });
+  // Packages that check for their dependencies themselves (isodate: "Package file substr.sty not found").
+  for (const m of output.matchAll(/Package file (\S+\.(?:sty|cls|tex|def|cfg)) not found/g)) missing.push({ kind: "file", name: m[1] });
+  // pdfTeX: "(file uhvb8a.pfb): cannot open Type 1 font file", "(file texnansi.enc): cannot open encoding file".
+  for (const m of output.matchAll(/\(file ([^)\s]+)\): cannot open/g)) missing.push({ kind: "file", name: m[1] });
   for (const m of output.matchAll(/Package fontspec Error:\s*(?:\(fontspec\)\s*)?The font "([^"]+)" cannot be\s+(?:\(fontspec\)\s*)?found/g))
     missing.push({ kind: "font", name: m[1] });
-  for (const m of output.matchAll(/not loadable: Metric \(TFM\) file(?: or installed font)? not found/g)) {
-    const font = /! Font \\[^=]+=([^\s:]+)/.exec(output.slice(Math.max(0, m.index! - 300), m.index!))?.[1];
-    if (font) missing.push({ kind: "file", name: font.replace(/\.tfm$/, "") + ".tfm" });
+  for (const m of output.matchAll(/luaotfload \| \w+ : [^\n]*?Font "([^"]+)" not found/g)) missing.push({ kind: "font", name: m[1] });
+  // "! Font \T1/cmr/m/n/10=ecrm1000 at 10pt not loadable" (older) or "! Font OML/zplm/m/it/8=zplmr7m ..." (newer).
+  for (const m of output.matchAll(/! Font \\?[^=\s]+=([^\s:]+?)(?: at [\d.]+pt| scaled \d+)? not loadable: Metric \(TFM\) file/g)) {
+    missing.push({ kind: "file", name: m[1].replace(/\.tfm$/, "") + ".tfm" });
   }
   for (const m of output.matchAll(/kpathsea: Running mktextfm (\S+)/g)) missing.push({ kind: "file", name: `${m[1]}.tfm` });
   for (const m of output.matchAll(/(?:sh: \d+: |\/bin\/sh: )?(\S+): (?:command )?not found/g)) {
@@ -71,8 +78,11 @@ export function parseLog(output: string): LogFindings {
 
   const pageMatches = [...output.matchAll(/Output written on [^(]+\((\d+) pages?/g)];
   const pages = pageMatches.length ? Number(pageMatches[pageMatches.length - 1][1]) : null;
+  const written = [...output.matchAll(/Output written on "?([^"\n(]+?\.(?:pdf|xdv|dvi))"?\s*\(/g)];
+  const outputFile = written.length ? written[written.length - 1][1].trim() : null;
 
   return {
+    outputFile,
     problems: uniq(problems, (p) => `${p.severity}|${p.file}|${p.line}|${p.message}`).slice(0, 50),
     missing: uniq(missing, (m) => `${m.kind}|${m.name}`),
     needsUnicodeEngine,

@@ -51,6 +51,13 @@ describe("planDocument", () => {
     expect([...d.requires.keys()]).toEqual(expect.arrayContaining(["ieee.bbx", "ieee.cbx", "biblatex.sty"]));
   });
 
+  it("turns font encodings and brace-less \\input in local packages into requirements", () => {
+    const d = planDocument(fx("cyrillic"), "main.tex");
+    expect([...d.requires.keys()]).toEqual(expect.arrayContaining(["t2aenc.def", "cm-super-t2a.enc", "chemfig.tex"]));
+    expect(d.requires.has("wrap.sty")).toBe(false);
+    expect([...d.languages.keys()]).toEqual(["russian"]);
+  });
+
   it("scans a local class and drops it from the TeX Live requirements", () => {
     const d = planDocument(fx("localcls"), "cv.tex");
     expect(d.requires.has("mycv.cls")).toBe(false);

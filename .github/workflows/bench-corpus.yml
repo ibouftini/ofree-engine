@@ -3,6 +3,10 @@ name: Benchmark · real-world corpus
 
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: Comma-separated entry ids to run (empty = all)
+        default: ""
 
 permissions:
   contents: read
@@ -11,6 +15,7 @@ permissions:
 jobs:
   incumbent-assumptionsofphysics-book:
     name: incumbent · assumptionsofphysics-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',assumptionsofphysics-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -26,6 +31,7 @@ jobs:
 
   ours-assumptionsofphysics-book:
     name: ours · assumptionsofphysics-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',assumptionsofphysics-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -44,6 +50,7 @@ jobs:
 
   incumbent-blockstreamresearch-zk-book:
     name: incumbent · blockstreamresearch-zk-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',blockstreamresearch-zk-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -60,6 +67,7 @@ jobs:
 
   ours-blockstreamresearch-zk-book:
     name: ours · blockstreamresearch-zk-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',blockstreamresearch-zk-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -79,6 +87,7 @@ jobs:
 
   incumbent-cvxgrp-cvxcla:
     name: incumbent · cvxgrp-cvxcla
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cvxgrp-cvxcla,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -95,6 +104,7 @@ jobs:
 
   ours-cvxgrp-cvxcla:
     name: ours · cvxgrp-cvxcla
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cvxgrp-cvxcla,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -114,6 +124,7 @@ jobs:
 
   incumbent-dcroote-stanford-thesis-example:
     name: incumbent · dcroote-stanford-thesis-example
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dcroote-stanford-thesis-example,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -128,6 +139,7 @@ jobs:
 
   ours-dcroote-stanford-thesis-example:
     name: ours · dcroote-stanford-thesis-example
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dcroote-stanford-thesis-example,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -145,6 +157,7 @@ jobs:
 
   incumbent-executablebooks-sphinx-design:
     name: incumbent · executablebooks-sphinx-design
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',executablebooks-sphinx-design,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -161,6 +174,7 @@ jobs:
 
   ours-executablebooks-sphinx-design:
     name: ours · executablebooks-sphinx-design
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',executablebooks-sphinx-design,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -180,6 +194,7 @@ jobs:
 
   incumbent-fhdwpb-latex-thesis-template:
     name: incumbent · fhdwpb-latex-thesis-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fhdwpb-latex-thesis-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -194,6 +209,7 @@ jobs:
 
   ours-fhdwpb-latex-thesis-template:
     name: ours · fhdwpb-latex-thesis-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fhdwpb-latex-thesis-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -211,6 +227,7 @@ jobs:
 
   incumbent-gboeing-cv:
     name: incumbent · gboeing-cv
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',gboeing-cv,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -225,6 +242,7 @@ jobs:
 
   ours-gboeing-cv:
     name: ours · gboeing-cv
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',gboeing-cv,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -242,6 +260,7 @@ jobs:
 
   incumbent-harvard-edge-cs249r-book:
     name: incumbent · harvard-edge-cs249r-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',harvard-edge-cs249r-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -257,6 +276,7 @@ jobs:
 
   ours-harvard-edge-cs249r-book:
     name: ours · harvard-edge-cs249r-book
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',harvard-edge-cs249r-book,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -275,6 +295,7 @@ jobs:
 
   incumbent-haskellfoundation-haskell-2010-revised-report:
     name: incumbent · haskellfoundation-haskell-2010-revised-report
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',haskellfoundation-haskell-2010-revised-report,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -290,6 +311,7 @@ jobs:
 
   ours-haskellfoundation-haskell-2010-revised-report:
     name: ours · haskellfoundation-haskell-2010-revised-report
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',haskellfoundation-haskell-2010-revised-report,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -308,6 +330,7 @@ jobs:
 
   incumbent-iydon-sustechthesis:
     name: incumbent · iydon-sustechthesis
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',iydon-sustechthesis,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -326,6 +349,7 @@ jobs:
 
   ours-iydon-sustechthesis:
     name: ours · iydon-sustechthesis
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',iydon-sustechthesis,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -347,6 +371,7 @@ jobs:
 
   incumbent-nag-devops-speed-hpc:
     name: incumbent · nag-devops-speed-hpc
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',nag-devops-speed-hpc,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -368,6 +393,7 @@ jobs:
 
   ours-nag-devops-speed-hpc:
     name: ours · nag-devops-speed-hpc
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',nag-devops-speed-hpc,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -392,6 +418,7 @@ jobs:
 
   incumbent-openhutb-neuro:
     name: incumbent · openhutb-neuro
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',openhutb-neuro,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -408,6 +435,7 @@ jobs:
 
   ours-openhutb-neuro:
     name: ours · openhutb-neuro
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',openhutb-neuro,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -427,6 +455,7 @@ jobs:
 
   incumbent-ruiguoz-nwpu-beamer:
     name: incumbent · ruiguoz-nwpu-beamer
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ruiguoz-nwpu-beamer,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -443,6 +472,7 @@ jobs:
 
   ours-ruiguoz-nwpu-beamer:
     name: ours · ruiguoz-nwpu-beamer
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ruiguoz-nwpu-beamer,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -462,6 +492,7 @@ jobs:
 
   incumbent-spacelab-ufsc-obdh2:
     name: incumbent · spacelab-ufsc-obdh2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spacelab-ufsc-obdh2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -477,6 +508,7 @@ jobs:
 
   ours-spacelab-ufsc-obdh2:
     name: ours · spacelab-ufsc-obdh2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spacelab-ufsc-obdh2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -495,6 +527,7 @@ jobs:
 
   incumbent-spamegg1-epp-discrete-math-5th-solutions:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -511,6 +544,7 @@ jobs:
 
   ours-spamegg1-epp-discrete-math-5th-solutions:
     name: ours · spamegg1-epp-discrete-math-5th-solutions
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -530,6 +564,7 @@ jobs:
 
   incumbent-spamegg1-epp-discrete-math-5th-solutions-2:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions-2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions-2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -546,6 +581,7 @@ jobs:
 
   ours-spamegg1-epp-discrete-math-5th-solutions-2:
     name: ours · spamegg1-epp-discrete-math-5th-solutions-2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions-2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -565,6 +601,7 @@ jobs:
 
   incumbent-ucl-tdms:
     name: incumbent · ucl-tdms
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ucl-tdms,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -580,6 +617,7 @@ jobs:
 
   ours-ucl-tdms:
     name: ours · ucl-tdms
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ucl-tdms,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -598,6 +636,7 @@ jobs:
 
   incumbent-varaprasad6700-resume:
     name: incumbent · varaprasad6700-resume
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',varaprasad6700-resume,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -612,6 +651,7 @@ jobs:
 
   ours-varaprasad6700-resume:
     name: ours · varaprasad6700-resume
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',varaprasad6700-resume,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -629,6 +669,7 @@ jobs:
 
   incumbent-ac-pate-latex-resume:
     name: incumbent · ac-pate-latex-resume
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ac-pate-latex-resume,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -643,6 +684,7 @@ jobs:
 
   ours-ac-pate-latex-resume:
     name: ours · ac-pate-latex-resume
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ac-pate-latex-resume,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -660,6 +702,7 @@ jobs:
 
   incumbent-adolbyb-icom-706-mkiig:
     name: incumbent · adolbyb-icom-706-mkiig
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',adolbyb-icom-706-mkiig,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -675,6 +718,7 @@ jobs:
 
   ours-adolbyb-icom-706-mkiig:
     name: ours · adolbyb-icom-706-mkiig
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',adolbyb-icom-706-mkiig,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -693,6 +737,7 @@ jobs:
 
   incumbent-agathasamuel-tugas-akhir:
     name: incumbent · agathasamuel-tugas-akhir
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',agathasamuel-tugas-akhir,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -707,6 +752,7 @@ jobs:
 
   ours-agathasamuel-tugas-akhir:
     name: ours · agathasamuel-tugas-akhir
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',agathasamuel-tugas-akhir,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -724,6 +770,7 @@ jobs:
 
   incumbent-ahmed-alhindawi-latex-template:
     name: incumbent · ahmed-alhindawi-latex-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ahmed-alhindawi-latex-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -739,6 +786,7 @@ jobs:
 
   ours-ahmed-alhindawi-latex-template:
     name: ours · ahmed-alhindawi-latex-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ahmed-alhindawi-latex-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -757,6 +805,7 @@ jobs:
 
   incumbent-aliaumel-word-ordering-wqo:
     name: incumbent · aliaumel-word-ordering-wqo
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',aliaumel-word-ordering-wqo,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -774,6 +823,7 @@ jobs:
 
   ours-aliaumel-word-ordering-wqo:
     name: ours · aliaumel-word-ordering-wqo
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',aliaumel-word-ordering-wqo,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -794,6 +844,7 @@ jobs:
 
   incumbent-anastasia-labs-midgard:
     name: incumbent · anastasia-labs-midgard
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',anastasia-labs-midgard,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -809,6 +860,7 @@ jobs:
 
   ours-anastasia-labs-midgard:
     name: ours · anastasia-labs-midgard
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',anastasia-labs-midgard,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -827,6 +879,7 @@ jobs:
 
   incumbent-andstor-tex-paper-template:
     name: incumbent · andstor-tex-paper-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',andstor-tex-paper-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -843,6 +896,7 @@ jobs:
 
   ours-andstor-tex-paper-template:
     name: ours · andstor-tex-paper-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',andstor-tex-paper-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -862,6 +916,7 @@ jobs:
 
   incumbent-bagaswizard-buku-ta:
     name: incumbent · bagaswizard-buku-ta
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bagaswizard-buku-ta,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -876,6 +931,7 @@ jobs:
 
   ours-bagaswizard-buku-ta:
     name: ours · bagaswizard-buku-ta
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bagaswizard-buku-ta,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -893,6 +949,7 @@ jobs:
 
   incumbent-bipplane-resume-latex:
     name: incumbent · bipplane-resume-latex
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bipplane-resume-latex,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -907,6 +964,7 @@ jobs:
 
   ours-bipplane-resume-latex:
     name: ours · bipplane-resume-latex
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bipplane-resume-latex,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -924,6 +982,7 @@ jobs:
 
   incumbent-cao-wuhui-szu-latex-master-template:
     name: incumbent · cao-wuhui-szu-latex-master-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cao-wuhui-szu-latex-master-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -979,6 +1038,7 @@ jobs:
 
   ours-cao-wuhui-szu-latex-master-template:
     name: ours · cao-wuhui-szu-latex-master-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cao-wuhui-szu-latex-master-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1037,6 +1097,7 @@ jobs:
 
   incumbent-capitan-parrot-salary-estimator:
     name: incumbent · capitan-parrot-salary-estimator
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',capitan-parrot-salary-estimator,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1053,6 +1114,7 @@ jobs:
 
   ours-capitan-parrot-salary-estimator:
     name: ours · capitan-parrot-salary-estimator
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',capitan-parrot-salary-estimator,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1072,6 +1134,7 @@ jobs:
 
   incumbent-cengkooo-proposal-imul-123140205:
     name: incumbent · cengkooo-proposal-imul-123140205
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cengkooo-proposal-imul-123140205,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1086,6 +1149,7 @@ jobs:
 
   ours-cengkooo-proposal-imul-123140205:
     name: ours · cengkooo-proposal-imul-123140205
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cengkooo-proposal-imul-123140205,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1103,6 +1167,7 @@ jobs:
 
   incumbent-ctex-org-lshort-zh-cn:
     name: incumbent · ctex-org-lshort-zh-cn
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ctex-org-lshort-zh-cn,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1119,6 +1184,7 @@ jobs:
 
   ours-ctex-org-lshort-zh-cn:
     name: ours · ctex-org-lshort-zh-cn
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ctex-org-lshort-zh-cn,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1138,6 +1204,7 @@ jobs:
 
   incumbent-david-alvarez-rosa-curriculum-vitae:
     name: incumbent · david-alvarez-rosa-curriculum-vitae
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',david-alvarez-rosa-curriculum-vitae,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1153,6 +1220,7 @@ jobs:
 
   ours-david-alvarez-rosa-curriculum-vitae:
     name: ours · david-alvarez-rosa-curriculum-vitae
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',david-alvarez-rosa-curriculum-vitae,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1171,6 +1239,7 @@ jobs:
 
   incumbent-diebrate-diebrate-github-io:
     name: incumbent · diebrate-diebrate-github-io
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',diebrate-diebrate-github-io,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1187,6 +1256,7 @@ jobs:
 
   ours-diebrate-diebrate-github-io:
     name: ours · diebrate-diebrate-github-io
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',diebrate-diebrate-github-io,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1206,6 +1276,7 @@ jobs:
 
   incumbent-digama0-conzf:
     name: incumbent · digama0-conzf
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digama0-conzf,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1221,6 +1292,7 @@ jobs:
 
   ours-digama0-conzf:
     name: ours · digama0-conzf
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digama0-conzf,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1239,6 +1311,7 @@ jobs:
 
   incumbent-digo-certify-digo-certify-app:
     name: incumbent · digo-certify-digo-certify-app
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digo-certify-digo-certify-app,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1255,6 +1328,7 @@ jobs:
 
   ours-digo-certify-digo-certify-app:
     name: ours · digo-certify-digo-certify-app
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digo-certify-digo-certify-app,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1274,6 +1348,7 @@ jobs:
 
   incumbent-dknaack-master-thesis:
     name: incumbent · dknaack-master-thesis
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dknaack-master-thesis,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1293,6 +1368,7 @@ jobs:
 
   ours-dknaack-master-thesis:
     name: ours · dknaack-master-thesis
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dknaack-master-thesis,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1315,6 +1391,7 @@ jobs:
 
   incumbent-dr-richard-barker-osdr-x-species-v2:
     name: incumbent · dr-richard-barker-osdr-x-species-v2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dr-richard-barker-osdr-x-species-v2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1331,6 +1408,7 @@ jobs:
 
   ours-dr-richard-barker-osdr-x-species-v2:
     name: ours · dr-richard-barker-osdr-x-species-v2
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dr-richard-barker-osdr-x-species-v2,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1350,6 +1428,7 @@ jobs:
 
   incumbent-eagleoutice-eagle-maps:
     name: incumbent · eagleoutice-eagle-maps
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',eagleoutice-eagle-maps,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1364,6 +1443,7 @@ jobs:
 
   ours-eagleoutice-eagle-maps:
     name: ours · eagleoutice-eagle-maps
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',eagleoutice-eagle-maps,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1381,6 +1461,7 @@ jobs:
 
   incumbent-erik-donath-mutau-rv32-soc:
     name: incumbent · erik-donath-mutau-rv32-soc
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',erik-donath-mutau-rv32-soc,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1396,6 +1477,7 @@ jobs:
 
   ours-erik-donath-mutau-rv32-soc:
     name: ours · erik-donath-mutau-rv32-soc
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',erik-donath-mutau-rv32-soc,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1414,6 +1496,7 @@ jobs:
 
   incumbent-fascetta-tool-lora-skill-ir:
     name: incumbent · fascetta-tool-lora-skill-ir
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fascetta-tool-lora-skill-ir,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1429,6 +1512,7 @@ jobs:
 
   ours-fascetta-tool-lora-skill-ir:
     name: ours · fascetta-tool-lora-skill-ir
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fascetta-tool-lora-skill-ir,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1447,6 +1531,7 @@ jobs:
 
   incumbent-feathbow-tju-rl-template:
     name: incumbent · feathbow-tju-rl-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',feathbow-tju-rl-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1463,6 +1548,7 @@ jobs:
 
   ours-feathbow-tju-rl-template:
     name: ours · feathbow-tju-rl-template
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',feathbow-tju-rl-template,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1482,6 +1568,7 @@ jobs:
 
   incumbent-firefly-cpp-cover-letter-latex:
     name: incumbent · firefly-cpp-cover-letter-latex
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',firefly-cpp-cover-letter-latex,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1496,6 +1583,7 @@ jobs:
 
   ours-firefly-cpp-cover-letter-latex:
     name: ours · firefly-cpp-cover-letter-latex
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',firefly-cpp-cover-letter-latex,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1513,6 +1601,7 @@ jobs:
 
   incumbent-fmuro-alg1:
     name: incumbent · fmuro-alg1
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fmuro-alg1,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1527,6 +1616,7 @@ jobs:
 
   ours-fmuro-alg1:
     name: ours · fmuro-alg1
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fmuro-alg1,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1544,6 +1634,7 @@ jobs:
 
   incumbent-franzmohr-fincommons:
     name: incumbent · franzmohr-fincommons
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',franzmohr-fincommons,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1560,6 +1651,7 @@ jobs:
 
   ours-franzmohr-fincommons:
     name: ours · franzmohr-fincommons
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',franzmohr-fincommons,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1579,6 +1671,7 @@ jobs:
 
   incumbent-garebear99-freeeq8:
     name: incumbent · garebear99-freeeq8
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',garebear99-freeeq8,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1594,6 +1687,7 @@ jobs:
 
   ours-garebear99-freeeq8:
     name: ours · garebear99-freeeq8
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',garebear99-freeeq8,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1612,6 +1706,7 @@ jobs:
 
   incumbent-ghdaru-tesedaru:
     name: incumbent · ghdaru-tesedaru
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ghdaru-tesedaru,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1628,6 +1723,7 @@ jobs:
 
   ours-ghdaru-tesedaru:
     name: ours · ghdaru-tesedaru
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ghdaru-tesedaru,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1647,6 +1743,7 @@ jobs:
 
   incumbent-guilhermemarchi-guide:
     name: incumbent · guilhermemarchi-guide
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',guilhermemarchi-guide,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1666,6 +1763,7 @@ jobs:
 
   ours-guilhermemarchi-guide:
     name: ours · guilhermemarchi-guide
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',guilhermemarchi-guide,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

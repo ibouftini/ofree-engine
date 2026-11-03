@@ -19,6 +19,25 @@ describe("parseLog", () => {
     ]);
   });
 
+  it("finds missing files in pdfTeX, isodate-style and newer font errors", () => {
+    const f = parseLog(
+      [
+        "!pdfTeX error: pdflatex (file uhvb8a.pfb): cannot open Type 1 font file for reading",
+        "! Package isodate.sty Error: Package file substr.sty not found.",
+        "! Font OML/zplm/m/it/8=zplmr7m at 8.0pt not loadable: Metric (TFM) file not found.",
+        'luaotfload | db : Reload initiated (formats: otf,ttf,ttc); reason: Font "Fira Sans Light" not found.',
+      ].join("\n"),
+    );
+    expect(f.missing).toEqual(
+      expect.arrayContaining([
+        { kind: "file", name: "uhvb8a.pfb" },
+        { kind: "file", name: "substr.sty" },
+        { kind: "file", name: "zplmr7m.tfm" },
+        { kind: "font", name: "Fira Sans Light" },
+      ]),
+    );
+  });
+
   it("detects documents that need a Unicode engine", () => {
     expect(parseLog("! Fatal Package fontspec Error: The fontspec package requires either XeTeX or\n(fontspec) LuaTeX.").needsUnicodeEngine).toBe(
       "xelatex",

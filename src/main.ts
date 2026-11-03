@@ -47,6 +47,46 @@ function plan(workspace: string): DocumentPlan[] {
   return roots.map((root) => planDocument(workspace, root, { engine: forced }));
 }
 
+/**
+ * xu-cheng/latex-action runs on Alpine by default, so existing workflows name
+ * Alpine packages. Translate the common ones to Ubuntu's names.
+ */
+function debianName(pkg: string): string {
+  const known: Record<string, string> = {
+    "py-pygments": "python3-pygments",
+    "py3-pygments": "python3-pygments",
+    "font-noto": "fonts-noto",
+    "font-noto-cjk": "fonts-noto-cjk",
+    "font-noto-emoji": "fonts-noto-color-emoji",
+    "font-dejavu": "fonts-dejavu",
+    "font-liberation": "fonts-liberation",
+    "ttf-dejavu": "fonts-dejavu",
+    "ttf-liberation": "fonts-liberation",
+    "openjdk17-jre": "openjdk-17-jre-headless",
+  };
+  if (known[pkg]) return known[pkg];
+  if (/^perl-[a-z0-9-]+$/.test(pkg)) return `lib${pkg.slice(5)}-perl`;
+  if (/^py3-/.test(pkg)) return `python3-${pkg.slice(4)}`;
+  if (/^font-/.test(pkg)) return `fonts-${pkg.slice(5)}`;
+  return pkg;
+}
+
+async function installSystemPackages(pkgs: string[]) {
+  core.info(`Installing system packages: ${pkgs.join(" ")}`);
+  await run("sudo", ["apt-get", "update", "-qq"]);
+  const all = await run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", ...pkgs], {
+    env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+  });
+  if (all.code === 0) return;
+  // One unknown name should not block the others.
+  for (const p of pkgs) {
+    const r = await run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", p], {
+      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+    });
+    if (r.code !== 0) core.warning(`System package '${p}' could not be installed; continuing without it.`);
+  }
+}
+
 async function shell(script: string, cwd: string, env: NodeJS.ProcessEnv, what: string) {
   if (!script.trim()) return;
   core.info(`Running ${what}`);
@@ -101,11 +141,8 @@ async function main() {
 
   // 3. Optional user setup (compatibility inputs).
   t = performance.now();
-  const sysPkgs = list("extra_system_packages");
-  if (sysPkgs.length) {
-    const r = await run("sudo", ["apt-get", "install", "-y", "--no-install-recommends", ...sysPkgs]);
-    if (r.code !== 0) throw new Error(`Installing system packages failed:\n${r.output}`);
-  }
+  const sysPkgs = core.getInput("extra_system_packages").split(/\s+/).filter(Boolean).map(debianName);
+  if (sysPkgs.length) await installSystemPackages(sysPkgs);
   const fonts = list("extra_fonts");
   if (fonts.length) {
     const fontDir = join(homedir(), ".local", "share", "fonts");
@@ -125,6 +162,8 @@ async function main() {
       for (const m of missing) {
         const candidates = m.kind === "file" ? [m.name, `${m.name}.sty`, `${m.name}.tex`, `${m.name}.cls`] : [m.name];
         const pkg = m.kind === "font" ? fontPackage(db, index, m.name) : candidates.map((c) => index.get(c)).find(Boolean);
+        const state = !pkg ? "no TeX Live package provides it" : tl.installedPackages().has(pkg) ? `${pkg}, already installed` : pkg;
+        core.info(`Missing ${m.kind} ${m.name}: ${state}`);
         if (pkg && !tl.installedPackages().has(pkg)) roots.add(pkg);
       }
       if (roots.size === 0) return [];
@@ -146,6 +185,7 @@ async function main() {
     args: userArgs ? userArgs.split(/\s+/).filter((a) => !/^-(pdf|xelatex|lualatex|pdflua|pdfxe)$/.test(a)) : ["-interaction=nonstopmode", "-file-line-error", "-halt-on-error"],
     shellEscape: bool("latexmk_shell_escape") ? "always" : ((core.getInput("shell_escape") || "auto") as CompileOptions["shellEscape"]),
     concurrency: Math.max(1, cpus().length),
+    log: (m) => core.info(m),
   };
   const results = await compileAll(workspace, docs, opts, () => tl.env(), recovery);
   phases.compile = seconds(t);

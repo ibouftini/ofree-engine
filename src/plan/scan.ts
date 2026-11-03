@@ -161,9 +161,18 @@ interface Accumulator {
   bibtex: Ref | null;
   shellEscape: (Ref & { reason: string }) | null;
   hasEps: Ref | null;
+  /** Font encodings that use cm-super with Computer Modern (t1, t2a, ...). */
+  encodings: Map<string, Ref>;
   sources: string[];
   visited: Set<string>;
 }
+
+// Font packages that replace Computer Modern, so cm-super is not needed for them.
+const CM_REPLACEMENTS = new Set([
+  "lmodern", "times", "mathptmx", "newtxtext", "newpxtext", "libertine", "libertinus", "palatino", "mathpazo",
+  "tgtermes", "tgpagella", "tgheros", "tgschola", "tgbonum", "charter", "XCharter", "fourier", "kpfonts", "ebgaramond",
+  "garamondx", "baskervillef", "stix", "stix2", "utopia", "erewhon", "helvet", "avant", "bookman", "newcent", "fontspec",
+]);
 
 function addOnce(map: Map<string, Ref>, key: string, ref: Ref) {
   if (!map.has(key)) map.set(key, ref);
@@ -224,6 +233,16 @@ function scanText(
           if (BIBLATEX_STANDARD_STYLES.has(style)) continue;
           if (sm[1] !== "citestyle") addOnce(acc.requires, style + ".bbx", r);
           if (sm[1] !== "bibstyle") addOnce(acc.requires, style + ".cbx", r);
+        }
+      }
+      if (name === "fontenc") {
+        // Each encoding needs its definition file; Computer Modern in T1 or
+        // Cyrillic encodings needs cm-super for vector (not bitmap) fonts.
+        for (const enc of splitNames(options)) {
+          if (!/^[A-Z][A-Z0-9]*$/i.test(enc)) continue;
+          const e = enc.toLowerCase();
+          if (e !== "ot1" && e !== "t1") addOnce(acc.requires, `${e}enc.def`, r);
+          if (/^(t1|ts1|t2a|t2b|t2c|x2)$/.test(e)) acc.encodings.set(e, r);
         }
       }
       if (name in SHELL_ESCAPE_PACKAGES && SHELL_ESCAPE_PACKAGES[name] && !acc.shellEscape) {
@@ -295,11 +314,30 @@ function scanText(
   }
 
   // Follow includes (relative to the compile directory, then to the file's directory).
+  // An \input that is not a local file is a file from TeX Live (\input chemfig, \input{xy}).
   const fileDir = dirname(join(workspace, fileRel));
-  for (const target of includeTargets(text, cwdAbs, fileDir)) {
-    const rel = relative(workspace, target);
-    if (rel.startsWith("..") || acc.visited.has(rel)) continue;
-    if (existsSync(target) && statSync(target).isFile()) visit(acc, workspace, cwdAbs, rel, false);
+  const inputs: { cmd: string; name: string; index: number; candidates: string[] }[] = [];
+  for (const m of text.matchAll(INCLUDE_RE)) {
+    const name = m[1].trim();
+    const cmd = /^\\(\w+)/.exec(m[0])![1];
+    inputs.push({ cmd, name, index: m.index!, candidates: withTex(name).flatMap((c) => [resolve(cwdAbs, c), resolve(fileDir, c)]) });
+  }
+  for (const m of text.matchAll(/\\input\s+([A-Za-z0-9_./-]+)/g)) {
+    const name = m[1].replace(/\.$/, "");
+    inputs.push({ cmd: "input", name, index: m.index!, candidates: withTex(name).flatMap((c) => [resolve(cwdAbs, c), resolve(fileDir, c)]) });
+  }
+  for (const m of text.matchAll(IMPORT_RE)) {
+    const name = m[2].trim();
+    inputs.push({ cmd: "import", name, index: m.index!, candidates: withTex(name).flatMap((c) => [resolve(cwdAbs, m[1], c), resolve(fileDir, m[1], c)]) });
+  }
+  for (const inc of inputs) {
+    const found = inc.candidates.find((c) => existsSync(c) && statSync(c).isFile());
+    if (found) {
+      const rel = relative(workspace, found);
+      if (!rel.startsWith("..") && !acc.visited.has(rel)) visit(acc, workspace, cwdAbs, rel, false);
+    } else if ((inc.cmd === "input" || inc.cmd === "InputIfFileExists") && /^[A-Za-z][\w.-]*$/.test(inc.name)) {
+      addOnce(acc.requires, extname(inc.name) ? inc.name : `${inc.name}.tex`, ref(inc.index));
+    }
   }
 }
 
@@ -350,11 +388,15 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     bibtex: null,
     shellEscape: null,
     hasEps: null,
+    encodings: new Map(),
     sources: [],
     visited: new Set(),
   };
   visit(acc, workspace, cwdAbs, root, false);
   absorbLocalFiles(acc, workspace, cwdAbs);
+  if (![...CM_REPLACEMENTS].some((p) => acc.packages.has(p))) {
+    for (const [enc, r] of acc.encodings) addOnce(acc.requires, enc === "ts1" ? "cm-super-ts1.enc" : `cm-super-${enc}.enc`, r);
+  }
 
   // Engine: explicit input > % !TeX program > .latexmkrc > packages and commands > pdfLaTeX.
   let engine: Engine = "pdflatex";

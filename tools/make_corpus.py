@@ -6,7 +6,7 @@ read its workflow, keep the latex-action step's inputs when they are static
 bench/corpus.json and .github/workflows/bench-corpus.yml, which runs every
 entry with the incumbent and with this action, passing identical inputs.
 
-Usage: python3 tools/make_corpus.py REPOS_TSV
+Usage: python3 tools/make_corpus.py REPOS_TSV   (or --regen to rebuild the workflow from bench/corpus.json)
   REPOS_TSV: lines "owner/repo<TAB>workflow-file-name" (extra columns ignored).
 Requires an authenticated `gh`.
 """
@@ -81,6 +81,10 @@ def workflow(entries):
         "",
         "on:",
         "  workflow_dispatch:",
+        "    inputs:",
+        "      only:",
+        "        description: Comma-separated entry ids to run (empty = all)",
+        "        default: \"\"",
         "",
         "permissions:",
         "  contents: read",
@@ -93,6 +97,7 @@ def workflow(entries):
             out += [
                 f"  {variant}-{e['id']}:",
                 f"    name: {variant} · {e['id']}",
+                f"    if: ${{{{ inputs.only == '' || contains(format(',{{0}},', inputs.only), ',{e['id']},') }}}}",
                 "    runs-on: ubuntu-latest",
                 "    timeout-minutes: 30",
                 "    steps:",
@@ -132,6 +137,11 @@ def workflow(entries):
 
 
 def main():
+    if sys.argv[1] == "--regen":
+        entries = json.load(open("bench/corpus.json"))
+        open(".github/workflows/bench-corpus.yml", "w").write(workflow(entries))
+        print(f"regenerated the workflow for {len(entries)} entries")
+        return
     seen, entries, skipped = set(), [], []
     for line in open(sys.argv[1]):
         repo, wf_name = line.rstrip("\n").split("\t")[:2]
