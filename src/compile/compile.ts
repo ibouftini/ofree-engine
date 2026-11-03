@@ -111,6 +111,7 @@ export async function compileDocument(
   const installed: string[] = [];
   const notes: string[] = [];
   let force = false;
+  let retriedAfterFonts = false;
   let last!: Awaited<ReturnType<typeof attempt>>;
   let findings!: LogFindings;
   let rounds = 0;
@@ -141,6 +142,12 @@ export async function compileDocument(
       engine = findings.needsUnicodeEngine;
       notes.push(`Switched to ${ENGINE_NAME[engine]}: the document needs a Unicode engine`);
       await recovery.ensureEngine(engine);
+      force = true;
+      continue;
+    }
+    if (findings.generatedFonts > 0 && !retriedAfterFonts) {
+      retriedAfterFonts = true;
+      notes.push(`Generated ${findings.generatedFonts} font file(s) with METAFONT, then compiled again`);
       force = true;
       continue;
     }

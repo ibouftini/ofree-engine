@@ -24,6 +24,8 @@ export interface LogFindings {
   pages: number | null;
   /** Last "Output written on X" path (may be in an -outdir), relative to the compile directory. */
   outputFile: string | null;
+  /** Fonts METAFONT generated during the run; they exist for the next attempt. */
+  generatedFonts: number;
 }
 
 const uniq = <T>(items: T[], key: (t: T) => string) => {
@@ -57,7 +59,8 @@ export function parseLog(raw: string): LogFindings {
   for (const m of output.matchAll(/! Font \\?[^=\s]+=([^\s:]+?)(?: at [\d.]+pt| scaled \d+)? not loadable: Metric \(TFM\) file/g)) {
     missing.push({ kind: "file", name: m[1].replace(/\.tfm$/, "") + ".tfm" });
   }
-  for (const m of output.matchAll(/kpathsea: Running mktextfm (\S+)/g)) missing.push({ kind: "file", name: `${m[1]}.tfm` });
+  // "kpathsea: Running mktextfm X" means TeX is generating a font, not that it is missing.
+  const generatedFonts = [...output.matchAll(/mktex(?:tfm|pk|mf): \S+: successfully generated/g)].length;
   for (const m of output.matchAll(/(?:sh: \d+: |\/bin\/sh: )?(\S+): (?:command )?not found/g)) {
     if (/^[\w.-]+$/.test(m[1]) && !m[1].includes(".tex")) missing.push({ kind: "program", name: m[1] });
   }
@@ -101,6 +104,7 @@ export function parseLog(raw: string): LogFindings {
   const outputFile = written.length ? written[written.length - 1][1].trim() : null;
 
   return {
+    generatedFonts,
     outputFile,
     problems: uniq(problems, (p) => `${p.severity}|${p.file}|${p.line}|${p.message}`).slice(0, 50),
     missing: uniq(missing, (m) => `${m.kind}|${m.name}`),
