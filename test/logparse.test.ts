@@ -57,6 +57,11 @@ describe("parseLog", () => {
     expect(f.problems[0].message).toContain("language definition file russian.ldf was not found");
   });
 
+  it("finds missing font definition files reported as warnings", () => {
+    const f = parseLog(["No file LGRcmr.fd.", "Latexmk: Missing input file 'LGRcmr.fd' message in .log file:", "No file main.toc."].join("\n"));
+    expect(f.missing).toEqual([{ kind: "file", name: "LGRcmr.fd" }]);
+  });
+
   it("detects documents that need a Unicode engine", () => {
     expect(parseLog("! Fatal Package fontspec Error: The fontspec package requires either XeTeX or\n(fontspec) LuaTeX.").needsUnicodeEngine).toBe(
       "xelatex",

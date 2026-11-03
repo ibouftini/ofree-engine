@@ -50,6 +50,9 @@ export function parseLog(raw: string): LogFindings {
   for (const m of output.matchAll(/I couldn't open style file (\S+\.bst)/g)) missing.push({ kind: "file", name: m[1] });
   // Packages that check for their dependencies themselves (isodate: "Package file substr.sty not found").
   for (const m of output.matchAll(/Package file (\S+\.(?:sty|cls|tex|def|cfg)) not found/g)) missing.push({ kind: "file", name: m[1] });
+  // Font definition files are only a warning ("No file LGRcmr.fd.") until NFSS gives up later.
+  for (const m of output.matchAll(/^No file (\S+\.fd)\.$/gm)) missing.push({ kind: "file", name: m[1] });
+  for (const m of output.matchAll(/Missing input file '(\S+\.(?:fd|sty|cls|def|cfg|clo|ldf))'/g)) missing.push({ kind: "file", name: m[1] });
   // pdfTeX: "(file uhvb8a.pfb): cannot open Type 1 font file", "(file texnansi.enc): cannot open encoding file".
   for (const m of output.matchAll(/\(file ([^)\s]+)\): cannot open/g)) missing.push({ kind: "file", name: m[1] });
   for (const m of output.matchAll(/Package fontspec Error:\s*(?:\(fontspec\)\s*)?The font "([^"]+)" cannot be\s+(?:\(fontspec\)\s*)?found/g))
