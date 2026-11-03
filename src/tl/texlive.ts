@@ -2,11 +2,11 @@
 // builds the formats the documents use. Network access happens only when
 // something is missing.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import type { Engine } from "../plan/scan.js";
 import { Mutex, run } from "../util/exec.js";
-import { downloadAll, fetchBytes, pickMirror, sha512, tlnetCandidates } from "./net.js";
+import { downloadAll, fetchBytes, rankMirrors, sha512, tlnetCandidates, tlpdbRevision } from "./net.js";
 import { buildFileIndex, closure, parseTlpdb, type Tlpdb } from "./tlpdb.js";
 
 export function texliveArch(): string {
@@ -134,29 +134,41 @@ export class TexLive {
   /** The package database and file index, fetched once per run from one mirror. */
   async database(): Promise<{ db: Tlpdb; index: Map<string, string> }> {
     if (this.db && this.index) return { db: this.db, index: this.index };
-    let tlnet: string;
-    try {
-      tlnet = await pickMirror(tlnetCandidates(this.year));
-    } catch (err) {
-      // The current year is not in the historic archive until it is frozen.
-      if (!this.year) throw err;
-      tlnet = await pickMirror(tlnetCandidates());
-    }
+    let ranked = await rankMirrors(tlnetCandidates(this.year));
+    // The current year is not in the historic archive until it is frozen.
+    if (ranked.length === 0 && this.year) ranked = await rankMirrors(tlnetCandidates());
+    if (ranked.length === 0) throw new Error("No TeX Live repository answered");
+
+    // Mirrors lag behind each other by a day or more, and tlmgr refuses a
+    // repository older than the installation. Read the database of the few
+    // fastest mirrors and use the newest one.
+    const fetched = await Promise.allSettled(
+      ranked.map(async (tlnet, i) => {
+        const dir = join(this.work, "tlpdb", String(i));
+        mkdirSync(dir, { recursive: true });
+        const [xz, sum, asc] = await Promise.all(
+          ["texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"].map((f) => fetchBytes(`${tlnet}/tlpkg/${f}`)),
+        );
+        writeFileSync(join(dir, "texlive.tlpdb.xz"), xz);
+        writeFileSync(join(dir, "texlive.tlpdb.sha512"), sum);
+        writeFileSync(join(dir, "texlive.tlpdb.sha512.asc"), asc);
+        const unxz = await run("xz", ["-dkf", join(dir, "texlive.tlpdb.xz")]);
+        if (unxz.code !== 0) throw new Error(`Could not decompress the package database: ${unxz.output}`);
+        const raw = readFileSync(join(dir, "texlive.tlpdb"));
+        if (sha512(raw) !== sum.toString("utf8").trim().split(/\s+/)[0]) throw new Error(`${tlnet}: checksum mismatch`);
+        return { tlnet, dir, raw, revision: tlpdbRevision(raw.toString("utf8", 0, 20_000)) };
+      }),
+    );
+    const good = fetched.flatMap((f) => (f.status === "fulfilled" ? [f.value] : []));
+    if (good.length === 0) throw new Error(`Could not read the package database from ${ranked.join(", ")}`);
+    const best = good.reduce((a, b) => (b.revision > a.revision ? b : a));
     const tlpkg = join(this.repo, "tlpkg");
     mkdirSync(tlpkg, { recursive: true });
-    const [xz, sum, asc] = await Promise.all(
-      ["texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"].map((f) => fetchBytes(`${tlnet}/tlpkg/${f}`)),
-    );
-    writeFileSync(join(tlpkg, "texlive.tlpdb.xz"), xz);
-    writeFileSync(join(tlpkg, "texlive.tlpdb.sha512"), sum);
-    writeFileSync(join(tlpkg, "texlive.tlpdb.sha512.asc"), asc);
-    const unxz = await run("xz", ["-dkf", join(tlpkg, "texlive.tlpdb.xz")]);
-    if (unxz.code !== 0) throw new Error(`Could not decompress the package database: ${unxz.output}`);
-    const raw = readFileSync(join(tlpkg, "texlive.tlpdb"));
-    const expected = sum.toString("utf8").trim().split(/\s+/)[0];
-    if (sha512(raw) !== expected) throw new Error(`The package database from ${tlnet} failed its checksum`);
-    this.tlnet = tlnet;
-    this.db = parseTlpdb(raw.toString("utf8"));
+    for (const f of ["texlive.tlpdb", "texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"]) {
+      copyFileSync(join(best.dir, f), join(tlpkg, f));
+    }
+    this.tlnet = best.tlnet;
+    this.db = parseTlpdb(best.raw.toString("utf8"));
     this.index = buildFileIndex(this.db, this.arch);
     return { db: this.db, index: this.index };
   }
@@ -181,17 +193,28 @@ export class TexLive {
   install(wanted: Set<string>): Promise<string[]> {
     return this.mutex.lock(async () => {
       const { db } = await this.database();
-      if (this.present && this.release !== db.release) {
-        // A cached installation from an older TeX Live year cannot take new packages.
-        renameSync(this.texdir, `${this.texdir}.${this.release}-${Date.now()}`);
-        this.installed = new Set();
-      }
+      // A cached installation from another TeX Live year cannot take new packages.
+      if (this.present && this.release !== db.release) this.discard();
       const before = new Set(this.installed);
       if (!this.present) await this.coldInstall(wanted);
-      const missing = [...wanted].filter((n) => !this.installed.has(n) && db.packages.has(n));
-      await this.tlmgrInstall(missing);
+      const missing = () => [...wanted].filter((n) => !this.installed.has(n) && db.packages.has(n));
+      try {
+        await this.tlmgrInstall(missing());
+      } catch (err) {
+        if (!(err instanceof Error) || !/older than the local installation/.test(err.message)) throw err;
+        // The cached installation is newer than every mirror that answered: start fresh.
+        this.discard();
+        await this.coldInstall(wanted);
+        await this.tlmgrInstall(missing());
+      }
       return [...this.installed].filter((n) => !before.has(n));
     });
+  }
+
+  /** Sets the current installation aside so a fresh one can be installed. */
+  private discard() {
+    renameSync(this.texdir, `${this.texdir}.old-${Date.now()}`);
+    this.installed = new Set();
   }
 
   private async coldInstall(wanted: Set<string>) {

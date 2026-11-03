@@ -30,19 +30,30 @@ export function tlnetCandidates(year?: number): string[] {
   return year ? HISTORIC.map((h) => `${h}/${year}/tlnet-final`) : MIRRORS.map((m) => `${m}/systems/texlive/tlnet`);
 }
 
-/** The first repository to answer; used for the whole run because mirrors drift. */
-export async function pickMirror(tlnets: string[]): Promise<string> {
-  const probe = async (tlnet: string) => {
-    const res = await fetch(`${tlnet}/tlpkg/texlive.tlpdb.sha512`, { signal: AbortSignal.timeout(6000) });
-    if (!res.ok) throw new Error(`${tlnet}: HTTP ${res.status}`);
-    await res.arrayBuffer();
-    return tlnet;
-  };
-  try {
-    return await Promise.any(tlnets.map(probe));
-  } catch {
-    throw new Error(`No TeX Live repository answered (tried ${tlnets.join(", ")})`);
-  }
+/** Repositories in the order they answered, at most `max` of them. */
+export function rankMirrors(tlnets: string[], max = 3): Promise<string[]> {
+  return new Promise((resolve) => {
+    const answered: string[] = [];
+    let pending = tlnets.length;
+    for (const tlnet of tlnets) {
+      fetch(`${tlnet}/tlpkg/texlive.tlpdb.sha512`, { signal: AbortSignal.timeout(6000) })
+        .then(async (res) => {
+          if (!res.ok) return;
+          await res.arrayBuffer();
+          answered.push(tlnet);
+          if (answered.length === max) resolve(answered.slice());
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (--pending === 0) resolve(answered.slice(0, max));
+        });
+    }
+  });
+}
+
+/** Repository revision recorded in a package database ("depend revision/80924"). */
+export function tlpdbRevision(text: string): number {
+  return Number(/^depend revision\/(\d+)$/m.exec(text.slice(0, 20_000))?.[1] ?? 0);
 }
 
 export async function fetchBytes(url: string, retries = 3): Promise<Buffer> {
