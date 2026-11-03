@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots"]') }}
         cache: [true, false]
     steps:
       - uses: actions/checkout@v5
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: xu-cheng/latex-action@v4

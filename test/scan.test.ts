@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findRoots, japaneseEngine, listTexFiles, planDocument, stripComments } from "../src/plan/scan.js";
+import { chooseMain, findRoots, japaneseEngine, listTexFiles, planDocument, stripComments } from "../src/plan/scan.js";
 
 const fx = (name: string) => join(import.meta.dirname, "fixtures", name);
 
@@ -15,6 +15,35 @@ describe("findRoots", () => {
   it("skips included files and subfiles", () => {
     const ws = fx("thesis");
     expect(findRoots(ws, listTexFiles(ws))).toEqual(["main.tex"]);
+  });
+});
+
+describe("chooseMain", () => {
+  const roots = (name: string) => {
+    const ws = fx(name);
+    const files = listTexFiles(ws);
+    return chooseMain(ws, files, findRoots(ws, files));
+  };
+
+  it("leaves out parts, and takes the file they name as the main document", () => {
+    // chapters/appendix.tex is a subfiles part with its own \\documentclass; notes.tex is another document.
+    expect(roots("roots-magic")).toEqual({ main: ["thesis.tex"], others: ["notes.tex"], reason: "named by % !TeX root" });
+  });
+
+  it("takes main.tex, and still builds the draft and the standalone figure", () => {
+    expect(roots("roots-named")).toEqual({ main: ["main.tex"], others: ["draft.tex", "figures/fig.tex"], reason: "named main.tex" });
+  });
+
+  it("follows .latexmkrc @default_files", () => {
+    expect(roots("roots-rc")).toMatchObject({ main: ["report.tex"], others: ["old-report.tex"] });
+  });
+
+  it("sets standalone figures aside", () => {
+    expect(roots("roots-figure")).toEqual({ main: ["paper.tex"], others: ["plot.tex"], reason: "the only document that is not a standalone figure" });
+  });
+
+  it("counts every document when none is marked", () => {
+    expect(roots("roots-ambiguous")).toEqual({ main: ["a.tex", "b.tex"], others: [], reason: "no main document is marked, so all count" });
   });
 });
 

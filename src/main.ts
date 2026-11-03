@@ -10,7 +10,7 @@ import { compileAll, EXTRA_LATEXMKRC, type CompileOptions } from "./compile/comp
 import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, languagePackages, lineage, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
-import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
+import { chooseMain, findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { Fonts, providable, type FontOutcome } from "./fonts.js";
 import { annotate, digestText, summaryMarkdown } from "./report.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
@@ -34,6 +34,9 @@ function expand(workspace: string, patterns: string[]): string[] {
   return [...new Set(out)];
 }
 
+/** How the main documents were chosen ("root_file input", "named main.tex", ...). */
+let mainReason = "root_file input";
+
 function plan(workspace: string): DocumentPlan[] {
   // An engine named in the inputs, either way xu-cheng/latex-action accepts it.
   const args = core.getInput("args").split(/\s+/);
@@ -51,9 +54,16 @@ function plan(workspace: string): DocumentPlan[] {
     for (const g of given) if (!existsSync(join(workspace, g))) throw new Error(`File '${g}' cannot be found from the directory '${workspace}'.`);
     return given.map((root) => planDocument(workspace, root, { engine: forced, cwd: inRootDir ? dirname(root) : "." }));
   }
-  const roots = findRoots(workspace, listTexFiles(workspace));
-  if (roots.length === 0) throw new Error("No LaTeX document found: no .tex file contains \\documentclass.");
-  return roots.map((root) => planDocument(workspace, root, { engine: forced }));
+  const files = listTexFiles(workspace);
+  const candidates = findRoots(workspace, files);
+  if (candidates.length === 0) throw new Error("No LaTeX document found: no .tex file contains \\documentclass.");
+  const roots = chooseMain(workspace, files, candidates);
+  mainReason = roots.reason;
+  core.info(`Main document${roots.main.length > 1 ? "s" : ""}: ${roots.main.join(", ")} (${roots.reason})` + (roots.others.length ? `; also building ${roots.others.join(", ")}` : ""));
+  return [
+    ...roots.main.map((root) => planDocument(workspace, root, { engine: forced })),
+    ...roots.others.map((root) => ({ ...planDocument(workspace, root, { engine: forced }), main: false })),
+  ];
 }
 
 /**
@@ -353,8 +363,9 @@ async function main() {
   t = performance.now();
   const pdfs = results.filter((r) => r.pdf).map((r) => r.pdf!);
   core.setOutput("pdf", pdfs.join("\n"));
-  const failed = results.filter((r) => r.status === "failed");
-  const withErrors = results.filter((r) => r.status === "errors");
+  // Only main documents decide the result; the others' problems are warnings.
+  const failed = results.filter((r) => r.status === "failed" && r.doc.main);
+  const withErrors = results.filter((r) => r.status === "errors" && r.doc.main);
   core.setOutput("status", failed.length ? "failure" : withErrors.length ? "errors" : "success");
   const onError = core.getInput("on_error") === "warn" ? "warn" : "fail";
   let artifactUrl: string | undefined;
@@ -386,6 +397,7 @@ async function main() {
           resolution,
           artifactUrl,
           fonts: fontOutcomes,
+          mainReason,
         }),
       )
       .write();

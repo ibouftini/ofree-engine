@@ -2,7 +2,7 @@
 // which documents to build, with which engine, and which files they need.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 
 /** pLaTeX and upLaTeX (Japanese) write DVI, which dvipdfmx turns into PDF. */
 export type Engine = "pdflatex" | "xelatex" | "lualatex" | "platex" | "uplatex";
@@ -39,6 +39,8 @@ export interface DocumentPlan {
   shellEscape: Ref & { reason: string } | null;
   /** An EPS image: converting it needs Ghostscript, whatever the engine. */
   eps: Ref | null;
+  /** False for documents built alongside the main ones (drafts, figures): their failures are warnings. */
+  main: boolean;
   /** Every source file read for this document, relative to the workspace. */
   sources: string[];
 }
@@ -125,6 +127,67 @@ export function findRoots(workspace: string, files: string[]): string[] {
     }
   }
   return files.filter((f) => /\\documentclass\s*[[{]/.test(texts.get(f)!) && !included.has(f));
+}
+
+const ROOT_DIRECTIVE = /^\s*%\s*!\s*TEX\s+root\s*=\s*(.+?)\s*$/im;
+
+export interface Roots {
+  /** Documents that decide whether the build passes. */
+  main: string[];
+  /** Other documents, built too; their failures are warnings. */
+  others: string[];
+  /** How the main documents were chosen, for the log and the summary. */
+  reason: string;
+}
+
+/**
+ * Splits the candidate documents (findRoots) into main documents and others,
+ * the way editors find a project's main file:
+ *   - parts are not documents: a file whose "% !TeX root" names another file,
+ *     or a \documentclass{subfiles} part;
+ *   - the main documents are the targets of "% !TeX root" comments, else the
+ *     files a .latexmkrc lists in @default_files, else main.tex, else the only
+ *     document left once standalone figures are set aside;
+ *   - with no such sign, every document is a main one: guessing could let a
+ *     broken main document pass as a draft.
+ */
+export function chooseMain(workspace: string, files: string[], candidates: string[]): Roots {
+  const head = (f: string) => readFileSync(join(workspace, f), "utf8").split("\n").slice(0, 30).join("\n");
+  const rootTargets = new Set<string>();
+  const parts = new Set<string>();
+  for (const f of files) {
+    const m = ROOT_DIRECTIVE.exec(head(f));
+    if (!m) continue;
+    const target = relative(workspace, resolve(workspace, dirname(f), withTex(m[1])[0]));
+    if (target !== f) {
+      rootTargets.add(target);
+      parts.add(f);
+    }
+  }
+  const isSubfile = (f: string) => /\\documentclass\s*(?:\[[^\]]*\])?\s*\{subfiles\}/.test(stripComments(head(f)));
+  const docs = candidates.filter((f) => !parts.has(f) && !isSubfile(f));
+  const pool = docs.length ? docs : candidates;
+  const pick = (main: string[], reason: string): Roots => ({ main, others: pool.filter((f) => !main.includes(f)), reason });
+
+  const targeted = pool.filter((f) => rootTargets.has(f));
+  if (targeted.length) return pick(targeted, "named by % !TeX root");
+  const defaults = new Set<string>();
+  for (const dir of new Set(["", ...pool.map((f) => dirname(f))])) {
+    for (const name of [".latexmkrc", "latexmkrc"]) {
+      const rc = join(workspace, dir, name);
+      if (!existsSync(rc)) continue;
+      const m = /@default_files\s*=\s*\(([^)]*)\)/.exec(readFileSync(rc, "utf8").replace(/(^|\s)#.*$/gm, "$1"));
+      for (const q of m?.[1].matchAll(/['"]([^'"*?]+)['"]/g) ?? []) defaults.add(relative(workspace, resolve(workspace, dir, withTex(q[1])[0])));
+    }
+  }
+  const listed = pool.filter((f) => defaults.has(f));
+  if (listed.length) return pick(listed, "listed in .latexmkrc @default_files");
+  const named = pool.filter((f) => basename(f) === "main.tex");
+  if (named.length) return pick(named, "named main.tex");
+  const isFigure = (f: string) => /\\documentclass\s*(?:\[[^\]]*\])?\s*\{standalone\}/.test(stripComments(head(f)));
+  const documents = pool.filter((f) => !isFigure(f));
+  if (documents.length === 1) return pick(documents, pool.length > 1 ? "the only document that is not a standalone figure" : "the only document");
+  return { main: pool, others: [], reason: pool.length > 1 ? "no main document is marked, so all count" : "the only document" };
 }
 
 const ENGINE_DIRECTIVE = /^\s*%\s*!\s*TEX\s+(?:TS-)?program\s*=\s*(\w+)/im;
@@ -600,5 +663,6 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     shellEscape: acc.shellEscape,
     eps: acc.hasEps,
     sources: acc.sources,
+    main: true,
   };
 }

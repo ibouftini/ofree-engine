@@ -20,6 +20,8 @@ export interface RunFacts {
   mirror?: string;
   resolution?: Resolution;
   artifactUrl?: string;
+  /** How the main documents were chosen. */
+  mainReason?: string;
   /** Fonts that are not in TeX Live, and where they came from. */
   fonts?: FontOutcome[];
 }
@@ -49,16 +51,16 @@ function describe(e: Issue): string {
 export function annotate(results: DocumentResult[], onError: "fail" | "warn", prefix: string) {
   for (const r of results) {
     if (r.status === "ok") continue;
-    const report = r.status === "errors" && onError === "warn" ? core.warning : core.error;
+    const report = !r.doc.main || (r.status === "errors" && onError === "warn") ? core.warning : core.error;
     const errors = r.diagnosis.errors.slice(0, 10);
     if (errors.length === 0) {
-      report(`${r.doc.root} could not be built. See the log of this step for details.`, { file: posix.join(prefix || ".", r.doc.root) });
+      report(`${r.doc.root} could not be built.${r.doc.main ? "" : " It is not the main document, so the build does not fail."} See the log of this step for details.`, { file: posix.join(prefix || ".", r.doc.root) });
       continue;
     }
     for (const e of errors) {
       const text = describe(e) + (e.hint ? `\n${plain(e.hint)}` : "");
       const file = e.file ? repoPath(r, e.file, prefix) : posix.join(prefix || ".", r.doc.root);
-      report(text, { title: `LaTeX error in ${r.doc.root}`, file, startLine: e.file ? e.lines[0] : undefined });
+      report(text, { title: `LaTeX error in ${r.doc.root}${r.doc.main ? "" : " (not the main document)"}`, file, startLine: e.file ? e.lines[0] : undefined });
     }
   }
 }
@@ -85,7 +87,7 @@ function documentSection(r: DocumentResult, prefix: string): string[] {
   const lines: string[] = [];
   const n = d.errors.length;
   if (r.status !== "ok") {
-    lines.push(`### ${code(r.doc.root)}: ${r.status === "errors" ? `PDF built through ${n} error${n === 1 ? "" : "s"}` : "no PDF"}`, "");
+    lines.push(`### ${code(r.doc.root)}${r.doc.main ? "" : " (not the main document)"}: ${r.status === "errors" ? `PDF built through ${n} error${n === 1 ? "" : "s"}` : "no PDF"}`, "");
     if (n === 0) lines.push("No LaTeX error message was found; see the log of this step.", "");
     d.errors.slice(0, 10).forEach((e, i) => {
       const where = e.file ? sourceLink(repoPath(r, e.file, prefix), e.lines[0]) + (e.lines.length > 1 ? ` (also line${e.lines.length > 2 ? "s" : ""} ${e.lines.slice(1, 6).join(", ")})` : "") : e.source ? `in ${code(e.source)}` : "";
@@ -112,16 +114,24 @@ function documentSection(r: DocumentResult, prefix: string): string[] {
 }
 
 export function summaryMarkdown(f: RunFacts): string {
-  const failed = f.results.filter((r) => r.status === "failed");
-  const withErrors = f.results.filter((r) => r.status === "errors");
+  // The headline is about the main documents; the others are listed below it.
+  const mains = f.results.filter((r) => r.doc.main);
+  const failed = mains.filter((r) => r.status === "failed");
+  const withErrors = mains.filter((r) => r.status === "errors");
   const total = Object.values(f.phases).reduce((a, b) => a + b, 0);
   const lines: string[] = [];
 
-  if (failed.length === f.results.length) lines.push(`## ❌ No document could be built`);
-  else if (failed.length) lines.push(`## ❌ ${failed.length} of ${f.results.length} documents could not be built`);
-  else if (withErrors.length) lines.push(`## ⚠️ PDF${f.results.length > 1 ? "s" : ""} built, with LaTeX errors to fix`);
+  if (failed.length === mains.length) lines.push(`## ❌ ${mains.length > 1 ? "No document could be built" : `${mains[0].doc.root} could not be built`}`);
+  else if (failed.length) lines.push(`## ❌ ${failed.length} of ${mains.length} documents could not be built`);
+  else if (withErrors.length) lines.push(`## ⚠️ PDF${mains.length > 1 ? "s" : ""} built, with LaTeX errors to fix`);
   else lines.push(`## ✅ Your PDFs are ready`);
   lines.push("");
+  const othersFailed = f.results.filter((r) => !r.doc.main && r.status !== "ok");
+  if (othersFailed.length) {
+    lines.push(`The main document${mains.length > 1 ? "s were" : " was"} chosen because ${f.mainReason ?? "it is marked"}. ${othersFailed.length} other document${othersFailed.length > 1 ? "s have" : " has"} problems, listed below; they do not fail the build.`, "");
+  } else if (f.mainReason === "no main document is marked, so all count") {
+    lines.push(`Several documents were found and none is marked as the main one, so each must build. To build only one, set \`root_file\`, or start the files it includes with \`% !TeX root = main.tex\`.`, "");
+  }
   lines.push(`Built in ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
     (f.artifactUrl ? ` [Download the PDFs](${f.artifactUrl})` : ""));
   lines.push("");
@@ -131,7 +141,8 @@ export function summaryMarkdown(f: RunFacts): string {
     const engine = `${ENGINE_NAME[r.engine]} <sub>${esc(r.engine === r.doc.engine ? r.doc.engineReason : "switched while compiling")}</sub>`;
     const n = r.diagnosis.errors.length;
     const result = r.status === "ok" ? `✅ ${esc(r.pdf ?? "")}` : r.status === "errors" ? `⚠️ ${esc(r.pdf ?? "")}, ${n} error${n === 1 ? "" : "s"}` : "❌ no PDF";
-    lines.push(`| \`${esc(r.doc.root)}\` | ${engine} | ${r.pages ?? "—"} | ${result} | ${r.seconds.toFixed(1)} s |`);
+    const role = mains.length < f.results.length ? (r.doc.main ? " <sub>main</sub>" : " <sub>also built</sub>") : "";
+    lines.push(`| \`${esc(r.doc.root)}\`${role} | ${engine} | ${r.pages ?? "—"} | ${result} | ${r.seconds.toFixed(1)} s |`);
   }
   lines.push("");
   const substituted = (f.fonts ?? []).filter((x) => x.source === "substitute");
