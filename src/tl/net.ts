@@ -18,18 +18,30 @@ export const MIRRORS = [
   "https://mirror.las.iastate.edu/tex-archive",
 ];
 
-export async function pickMirror(mirrors = MIRRORS): Promise<string> {
-  const probe = async (m: string) => {
-    const tlnet = `${m}/systems/texlive/tlnet`;
+/** Mirrors of TeX Live's historic archive, which keeps each frozen year in the tlnet layout. */
+export const HISTORIC = [
+  "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive",
+  "https://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive",
+  "https://mirrors.tuna.tsinghua.edu.cn/tex-historic-archive/systems/texlive",
+];
+
+/** Repository URLs (tlnet) for the current TeX Live, or for a frozen year. */
+export function tlnetCandidates(year?: number): string[] {
+  return year ? HISTORIC.map((h) => `${h}/${year}/tlnet-final`) : MIRRORS.map((m) => `${m}/systems/texlive/tlnet`);
+}
+
+/** The first repository to answer; used for the whole run because mirrors drift. */
+export async function pickMirror(tlnets: string[]): Promise<string> {
+  const probe = async (tlnet: string) => {
     const res = await fetch(`${tlnet}/tlpkg/texlive.tlpdb.sha512`, { signal: AbortSignal.timeout(6000) });
-    if (!res.ok) throw new Error(`${m}: HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`${tlnet}: HTTP ${res.status}`);
     await res.arrayBuffer();
     return tlnet;
   };
   try {
-    return await Promise.any(mirrors.map(probe));
+    return await Promise.any(tlnets.map(probe));
   } catch {
-    throw new Error(`No TeX Live mirror answered (tried ${mirrors.join(", ")})`);
+    throw new Error(`No TeX Live repository answered (tried ${tlnets.join(", ")})`);
   }
 }
 

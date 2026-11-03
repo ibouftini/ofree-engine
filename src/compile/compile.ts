@@ -51,7 +51,10 @@ export interface DocumentResult {
   installed: string[];
   notes: string[];
   findings: LogFindings;
+  /** Build program output followed by the engine's .log (and .blg). */
   output: string;
+  /** Build program output only. */
+  runOutput: string;
 }
 
 const ENGINE_FLAG: Record<Engine, string> = { pdflatex: "-pdf", xelatex: "-xelatex", lualatex: "-lualatex" };
@@ -92,7 +95,7 @@ async function attempt(
   const written = /Output written on "?([^"\n(]+?)\.(?:pdf|xdv|dvi)"?\s*\(/g;
   const fromLog = [...r.output.matchAll(written)].map((m) => resolve(cwd, m[1].trim() + ".pdf"));
   const pdfAbs = [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find((p) => existsSync(p));
-  return { code: r.code, output, pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
+  return { code: r.code, output, runOutput: r.output, pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
 }
 
 export async function compileDocument(
@@ -163,17 +166,33 @@ export async function compileDocument(
     notes,
     findings,
     output: last.output,
+    runOutput: last.runOutput,
   };
 }
 
-export function compileAll(
+export async function compileAll(
   workspace: string,
   docs: DocumentPlan[],
   opts: CompileOptions,
   env: () => NodeJS.ProcessEnv,
   recovery: Recovery,
 ): Promise<DocumentResult[]> {
-  return pool(docs, opts.concurrency, (doc) => compileDocument(workspace, doc, opts, env, recovery));
+  const results = await pool(docs, opts.concurrency, (doc) => compileDocument(workspace, doc, opts, env, recovery));
+  // A document may use another's output (a figure built as its own document).
+  // Built in parallel it can start too early, so retry failures one by one, in
+  // order, once everything else is done.
+  if (results.some((r) => r.ok) && results.some((r) => !r.ok)) {
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].ok) continue;
+      opts.log?.(`${docs[i].root}: building again after the other documents`);
+      const again = await compileDocument(workspace, docs[i], opts, env, recovery);
+      if (again.ok) {
+        again.notes.unshift("Built after the other documents, whose output it uses");
+        results[i] = again;
+      }
+    }
+  }
+  return results;
 }
 
 export { ENGINE_NAME };

@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFile
 import { delimiter, join } from "node:path";
 import type { Engine } from "../plan/scan.js";
 import { Mutex, run } from "../util/exec.js";
-import { downloadAll, fetchBytes, pickMirror, sha512 } from "./net.js";
+import { downloadAll, fetchBytes, pickMirror, sha512, tlnetCandidates } from "./net.js";
 import { buildFileIndex, closure, parseTlpdb, type Tlpdb } from "./tlpdb.js";
 
 export function texliveArch(): string {
@@ -41,6 +41,8 @@ export class TexLive {
     readonly texdir: string,
     readonly arch: string,
     private readonly work: string,
+    /** A frozen TeX Live year to install from the historic archive; undefined for the current one. */
+    readonly year?: number,
   ) {
     this.bin = join(texdir, "bin", arch);
     this.repo = join(work, "repo");
@@ -121,7 +123,14 @@ export class TexLive {
   /** The package database and file index, fetched once per run from one mirror. */
   async database(): Promise<{ db: Tlpdb; index: Map<string, string> }> {
     if (this.db && this.index) return { db: this.db, index: this.index };
-    const tlnet = await pickMirror();
+    let tlnet: string;
+    try {
+      tlnet = await pickMirror(tlnetCandidates(this.year));
+    } catch (err) {
+      // The current year is not in the historic archive until it is frozen.
+      if (!this.year) throw err;
+      tlnet = await pickMirror(tlnetCandidates());
+    }
     const tlpkg = join(this.repo, "tlpkg");
     mkdirSync(tlpkg, { recursive: true });
     const [xz, sum, asc] = await Promise.all(
@@ -205,7 +214,14 @@ export class TexLive {
         "",
       ].join("\n"),
     );
-    const r = await run("perl", [join(this.work, "installer", "install-tl"), "-no-gui", "-profile", profile, "-repository", this.repo]);
+    const installTl = (extra: string[]) =>
+      run("perl", [join(this.work, "installer", "install-tl"), "-no-gui", "-profile", profile, "-repository", this.repo, ...extra]);
+    let r = await installTl([]);
+    if (r.code !== 0 && /gpg|signature|verif/i.test(r.output)) {
+      // Old years are signed with keys that have since expired; the database
+      // checksum was already verified above.
+      r = await installTl(["-no-verify-downloads"]);
+    }
     if (r.code !== 0) throw new Error(`install-tl failed:\n${tail(r.output)}`);
     this.release = db.release;
     this.installed = basic;
@@ -229,8 +245,9 @@ export class TexLive {
     if (names.length === 0) return;
     await this.prefetch(names);
     const tlmgr = join(this.bin, "tlmgr");
-    const install = () => run(tlmgr, ["--repository", this.repo, "install", ...names], { env: this.env() });
+    const install = (extra: string[] = []) => run(tlmgr, [...extra, "--repository", this.repo, "install", ...names], { env: this.env() });
     let r = await install();
+    if (r.code !== 0 && /gpg|signature|verif/i.test(r.output)) r = await install(["--verify-repo=none"]);
     if (r.code !== 0 && /update --self|needs to be updated/i.test(r.output)) {
       await this.prefetch(["texlive.infra", `texlive.infra.${this.arch}`]);
       await run(tlmgr, ["--repository", this.repo, "update", "--self"], { env: this.env() });
