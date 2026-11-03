@@ -89,6 +89,15 @@ describe.skipIf(!real || !existsSync(real))("real texlive.tlpdb", () => {
     expect(r.packages.has("xetex")).toBe(false);
   });
 
+  it("installs upLaTeX, its fonts and the programs a .latexmkrc names", () => {
+    const doc = planDocument(join(import.meta.dirname, "fixtures", "japanese-rc"), "thesis.tex");
+    const r = resolvePackages(db, index, arch, [doc]);
+    for (const p of ["uplatex", "uptex", "ptex-fontmaps", "haranoaji", "jsclasses"]) expect(r.packages.has(p), p).toBe(true);
+    expect(r.packages.has("biber")).toBe(false);
+    const cls = planDocument(join(import.meta.dirname, "fixtures", "japanese-class"), "report.tex");
+    expect(resolvePackages(db, index, arch, [cls]).packages.has("upmendex")).toBe(true);
+  });
+
   it("resolves the fixture thesis without leftovers", () => {
     const doc = planDocument(join(import.meta.dirname, "fixtures", "thesis"), "main.tex");
     const r = resolvePackages(db, index, arch, [doc]);

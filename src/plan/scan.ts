@@ -4,7 +4,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 
-export type Engine = "pdflatex" | "xelatex" | "lualatex";
+/** pLaTeX and upLaTeX (Japanese) write DVI, which dvipdfmx turns into PDF. */
+export type Engine = "pdflatex" | "xelatex" | "lualatex" | "platex" | "uplatex";
 
 /** Where something was found, for messages such as "fontspec (main.tex:4)". */
 export interface Ref {
@@ -24,6 +25,8 @@ export interface DocumentPlan {
   engineReason: string;
   /** True when a .latexmkrc chooses the engine; latexmk then gets no engine flag. */
   engineFromLatexmkrc: boolean;
+  /** Programs a .latexmkrc runs (upbibtex, mendex, ...), installed with the document's packages. */
+  programs: Map<string, Ref>;
   /** Files the document needs from TeX Live, keyed by file name. */
   requires: Map<string, Ref>;
   /** Babel or polyglossia language names. */
@@ -126,25 +129,74 @@ const ENGINE_DIRECTIVE = /^\s*%\s*!\s*TEX\s+(?:TS-)?program\s*=\s*(\w+)/im;
 
 function engineFromName(name: string): Engine | null {
   const n = name.toLowerCase();
+  if (n.includes("uplatex") || n === "uptex") return "uplatex";
+  if (n.includes("platex") || n === "ptex") return "platex";
   if (n.includes("xelatex") || n === "xetex") return "xelatex";
   if (n.includes("lualatex") || n === "luatex" || n === "luahblatex") return "lualatex";
   if (n.includes("pdflatex") || n === "pdftex" || n === "latex") return "pdflatex";
   return null;
 }
 
-/** Engine chosen by a .latexmkrc in `dir`, if any ($pdf_mode 4 = LuaLaTeX, 5 = XeLaTeX). */
-export function latexmkrcEngine(dir: string): Engine | null {
+export interface Latexmkrc {
+  /** The engine it chooses, if any. */
+  engine: Engine | null;
+  /** Programs each of its commands runs ($bibtex = 'upbibtex %O %S' -> bibtex: [upbibtex]). */
+  programs: Map<string, string[]>;
+  file: string;
+}
+
+/**
+ * Reads a .latexmkrc in `dir`. $pdf_mode chooses the route: 1 pdfLaTeX,
+ * 4 LuaLaTeX, 5 XeLaTeX, 3 (DVI, then dvipdfmx) or 2 (PostScript) with the
+ * engine named in $latex, which is how Japanese projects use pLaTeX and upLaTeX.
+ */
+export function readLatexmkrc(dir: string): Latexmkrc | null {
   for (const name of [".latexmkrc", "latexmkrc"]) {
     const path = join(dir, name);
     if (!existsSync(path)) continue;
-    const text = readFileSync(path, "utf8").replace(/#.*$/gm, "");
+    const text = readFileSync(path, "utf8").replace(/(^|\s)#.*$/gm, "$1");
+    const commands = new Map<string, string>();
+    for (const m of text.matchAll(/\$(latex|pdflatex|lualatex|xelatex|bibtex|biber|makeindex|dvipdf|dvips|ps2pdf)\s*=\s*(['"])(.*?)\2/g)) commands.set(m[1], m[3]);
+    // Every command word: "uplatex -synctex=1 %O %S", or several joined by ; | &&.
+    const words = (c: string) => c.split(/[;|&]+/).map((part) => /^\s*([\w.-]+)/.exec(part)?.[1]).filter((w): w is string => !!w);
+    const programs = new Map([...commands].map(([role, c]) => [role, words(c)]));
     const mode = /\$pdf_mode\s*=\s*(\d)/.exec(text)?.[1];
-    if (mode === "4") return "lualatex";
-    if (mode === "5") return "xelatex";
-    if (mode === "1") return "pdflatex";
-    if (/\$pdflatex\s*=\s*['"]\s*xelatex/.test(text)) return "xelatex";
-    if (/\$pdflatex\s*=\s*['"]\s*lualatex/.test(text)) return "lualatex";
+    const dviEngine = (): Engine | null => {
+      const latex = commands.get("latex")?.split(/[;|&]+/).map((p) => /^\s*([\w.-]+)/.exec(p)?.[1] ?? "").find((w) => /latex$|tex$/.test(w));
+      return latex ? (engineFromName(latex) ?? "pdflatex") : "pdflatex";
+    };
+    let engine: Engine | null = null;
+    if (mode === "4") engine = "lualatex";
+    else if (mode === "5") engine = "xelatex";
+    else if (mode === "1") engine = "pdflatex";
+    else if (mode === "2" || mode === "3") engine = dviEngine();
+    else if (/^\s*xelatex/.test(commands.get("pdflatex") ?? "")) engine = "xelatex";
+    else if (/^\s*lualatex/.test(commands.get("pdflatex") ?? "")) engine = "lualatex";
+    else if (/^\s*u?platex/.test(commands.get("latex") ?? "")) engine = dviEngine();
+    return { engine, programs, file: name };
   }
+  return null;
+}
+
+/** Engine chosen by a .latexmkrc in `dir`, if any. */
+export function latexmkrcEngine(dir: string): Engine | null {
+  return readLatexmkrc(dir)?.engine ?? null;
+}
+
+/**
+ * The engine a Japanese class asks for: upLaTeX for ujarticle and friends or
+ * an [uplatex] option, pLaTeX for jarticle and jsarticle, LuaLaTeX for jlreq
+ * without an engine option (its recommended engine).
+ */
+export function japaneseEngine(cls: string, options: string[]): Engine | null {
+  const opt = (o: string) => options.includes(o);
+  const named = (["uplatex", "platex", "lualatex", "xelatex", "pdflatex"] as const).find(opt);
+  if (/^u[jt](article|book|report)$/.test(cls)) return "uplatex";
+  if (/^(js(article|book|report)|bxjs\w+|jlreq|tlreq)$/.test(cls) && named) return named;
+  // bxjs classes work with every engine (autodetect-engine); XeLaTeX is the quickest Unicode one.
+  if (/^bxjs\w+$/.test(cls)) return "xelatex";
+  if (/^([jt]|js)(article|book|report)$/.test(cls)) return "platex";
+  if (/^(jlreq|tlreq)$/.test(cls)) return "lualatex";
   return null;
 }
 
@@ -159,6 +211,8 @@ interface Accumulator {
   fonts: Map<string, Ref>;
   packages: Map<string, Ref>;
   directive: { engine: Engine; ref: Ref } | null;
+  /** Classes loaded (the document's and those local classes load), with their options. */
+  classes: { name: string; options: string[]; ref: Ref }[];
   /** Something only LuaTeX runs: Lua code, or a babel feature implemented in Lua. */
   luaFeature: { reason: string; ref: Ref } | null;
   /** babel's bidi= option. */
@@ -270,6 +324,7 @@ function scanText(
     const r = ref(m.index!);
     addOnce(acc.packages, name, r);
     addOnce(acc.requires, name + ".cls", r);
+    acc.classes.push({ name, options: splitNames(m[1] ?? "").map((o) => o.toLowerCase()), ref: r });
     // Global class options are passed to babel as languages; keep plausible ones.
     for (const opt of splitNames(m[1] ?? "")) {
       if (/^[a-z]{4,}$/.test(opt) && !/^(draft|final|twoside|oneside|landscape|portrait|onecolumn|twocolumn|titlepage|notitlepage|openright|openany|fleqn|leqno|handout|aspectratio|compress|serif|sans|journal|conference|letterpaper|legalpaper|executivepaper|english|american|british)$/.test(opt)) {
@@ -402,6 +457,23 @@ function absorbLocalFiles(acc: Accumulator, workspace: string, cwdAbs: string) {
   }
 }
 
+/**
+ * The programs of a .latexmkrc this document will run: its engine's command,
+ * dvipdfmx on the DVI route, the bibliography tool it uses, and the index
+ * tool if it has an index. Commands for other routes are left out, as their
+ * programs can be large (Biber is 25 MB).
+ */
+function rcPrograms(rc: Latexmkrc | null, engine: Engine, bibTool: DocumentPlan["bibTool"], requires: Map<string, Ref>, file: string): Map<string, Ref> {
+  const out = new Map<string, Ref>();
+  if (!rc) return out;
+  const roles = [engine === "platex" || engine === "uplatex" ? "latex" : engine];
+  if (engine === "platex" || engine === "uplatex") roles.push("dvipdf");
+  if (bibTool) roles.push(bibTool);
+  if (["makeidx.sty", "imakeidx.sty", "index.sty"].some((f) => requires.has(f))) roles.push("makeindex");
+  for (const role of roles) for (const p of rc.programs.get(role) ?? []) if (!out.has(p)) out.set(p, { file, line: 1 });
+  return out;
+}
+
 export interface PlanOptions {
   /** Force an engine for every document (compatibility inputs). */
   engine?: Engine;
@@ -419,6 +491,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     fonts: new Map(),
     packages: new Map(),
     directive: null,
+    classes: [],
     luaFeature: null,
     babelBidi: null,
     babelFont: null,
@@ -440,7 +513,9 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
   let engine: Engine = "pdflatex";
   let engineReason = "default";
   let engineFromLatexmkrc = false;
-  const rcEngine = latexmkrcEngine(cwdAbs);
+  const rc = readLatexmkrc(cwdAbs);
+  const rcEngine = rc?.engine ?? null;
+  const ja = acc.classes.map((c) => ({ c, engine: japaneseEngine(c.name, c.options) })).find((x) => x.engine);
   const lua = LUA_SIGNALS.find((p) => acc.packages.has(p));
   const xe = XE_SIGNALS.find((p) => acc.packages.has(p));
   const fmt = (r: Ref) => `${r.file}:${r.line}`;
@@ -452,7 +527,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     engineReason = `% !TeX program (${fmt(acc.directive.ref)})`;
   } else if (rcEngine) {
     engine = rcEngine;
-    engineReason = ".latexmkrc";
+    engineReason = rc!.file;
     engineFromLatexmkrc = true;
   } else if (lua) {
     engine = "lualatex";
@@ -460,6 +535,9 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
   } else if (acc.luaFeature) {
     engine = "lualatex";
     engineReason = `${acc.luaFeature.reason} (${fmt(acc.luaFeature.ref)})`;
+  } else if (ja) {
+    engine = ja.engine!;
+    engineReason = `${ja.c.name}${ja.c.options.includes(ja.engine!) ? ` [${ja.engine}]` : ""} (${fmt(ja.c.ref)})`;
   } else if (xe) {
     engine = "xelatex";
     engineReason = `${xe} (${fmt(acc.packages.get(xe)!)})`;
@@ -500,6 +578,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     engine,
     engineReason,
     engineFromLatexmkrc,
+    programs: rcPrograms(rc, engine, bibTool, acc.requires, join(cwdRel, rc?.file ?? "")),
     requires: acc.requires,
     languages,
     locales: acc.locales,

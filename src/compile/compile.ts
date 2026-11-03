@@ -102,8 +102,20 @@ export interface DocumentResult {
   runOutput: string;
 }
 
-const ENGINE_FLAG: Record<Engine, string> = { pdflatex: "-pdf", xelatex: "-xelatex", lualatex: "-lualatex" };
-const ENGINE_NAME: Record<Engine, string> = { pdflatex: "pdfLaTeX", xelatex: "XeLaTeX", lualatex: "LuaLaTeX" };
+/** pLaTeX and upLaTeX write DVI; dvipdfmx makes the PDF, and they come with their own BibTeX and index tools. */
+const dviRoute = (tex: string, bibtex: string, mendex: string) => [
+  "-pdfdvi",
+  "-e",
+  `$latex = q/${tex} %O %S/; $bibtex = q/${bibtex} %O %S/; $makeindex = q/${mendex} %O -o %D %S/; $dvipdf = q/dvipdfmx %O -o %D %S/;`,
+];
+const ENGINE_ARGS: Record<Engine, string[]> = {
+  pdflatex: ["-pdf"],
+  xelatex: ["-xelatex"],
+  lualatex: ["-lualatex"],
+  platex: dviRoute("platex", "pbibtex", "mendex"),
+  uplatex: dviRoute("uplatex", "upbibtex", "upmendex"),
+};
+const ENGINE_NAME: Record<Engine, string> = { pdflatex: "pdfLaTeX", xelatex: "XeLaTeX", lualatex: "LuaLaTeX", platex: "pLaTeX", uplatex: "upLaTeX" };
 const MAX_ROUNDS = 8;
 
 async function attempt(
@@ -124,7 +136,7 @@ async function attempt(
     if (opts.extraRc) args.push("-r", opts.extraRc);
     // Respect a route the user chose (-pdfdvi, -pdfps for PSTricks), and a .latexmkrc's engine.
     const userMode = opts.args.some((a) => MODE_FLAGS.test(a));
-    if (!userMode && (!doc.engineFromLatexmkrc || engine !== doc.engine)) args.push(ENGINE_FLAG[engine]);
+    if (!userMode && (!doc.engineFromLatexmkrc || engine !== doc.engine)) args.push(...ENGINE_ARGS[engine]);
     if (keepGoing) {
       args.push(...opts.args.filter((a) => a !== "-halt-on-error"), "-f");
       if (!opts.args.some((a) => a.startsWith("-interaction"))) args.push("-interaction=nonstopmode");

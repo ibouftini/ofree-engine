@@ -391,5 +391,98 @@
    "latexmk_use_xelatex": "false",
    "args": "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
   }
+ },
+ {
+  "id": "kuisthesis-kyoto",
+  "repo": "CommCompEngKyotoU/kuisthesis-template",
+  "sha": "62b2d110e06247107692f1cf3642492615a5cda5",
+  "with": {
+   "root_file": "guide.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "prg-thesis-titech",
+  "repo": "prg-titech/prg-thesis-template-ja",
+  "sha": "9d976bc08751d277e6638d94a4b9d26b395f752b",
+  "with": {
+   "root_file": "thesis.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "cpslab-thesis",
+  "repo": "cpslab/graduation-thesis-template",
+  "sha": "5ce39279615969d54df4cb8a6cddcb52706900c5",
+  "with": {
+   "root_file": "main_thesis.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "coins-article-tsukuba",
+  "repo": "KaiseiYokoyama/coins_graduation_article",
+  "sha": "69d48f3f4342717af06303382f911338c2d22c15",
+  "with": {
+   "root_file": "article.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "matsumoto-thesis",
+  "repo": "matsumotokoki/thesis_template",
+  "sha": "27d033b01b0e56ecbda325982926821a970e0a28",
+  "with": {
+   "root_file": "thesis.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "kut-platex",
+  "repo": "TakumiJinushi/2025_KUT_ele_templates",
+  "sha": "1f5ee8efa2577195c04c211b8eed0a801dab1a3d",
+  "with": {
+   "working_directory": "KUT_ele_pLaTeX_ver",
+   "root_file": "main.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "kut-lualatex",
+  "repo": "TakumiJinushi/2025_KUT_ele_templates",
+  "sha": "1f5ee8efa2577195c04c211b8eed0a801dab1a3d",
+  "with": {
+   "working_directory": "KUT_ele_LuaTeX_ver",
+   "root_file": "main.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "being24-template-ja",
+  "repo": "being24/latex-template-ja",
+  "sha": "65c9069ff8998014eed9ec1e4cbb5de03b291fcd",
+  "with": {
+   "root_file": "main.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "kmc-shinkan2020",
+  "repo": "kmc-jp/shinkan2020",
+  "sha": "2355d7fa1a2e923eee23d93c95aec575a85c1f3a",
+  "with": {
+   "root_file": "main.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "bando-weekly-report",
+  "repo": "b-sigpro/weekly-report",
+  "sha": "e0ce21acbdb4a496fd471f8791420a44203af46e",
+  "with": {
+   "working_directory": "template",
+   "root_file": "report.tex"
+  },
+  "group": "japanese"
  }
 ]

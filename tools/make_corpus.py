@@ -6,6 +6,9 @@ read its workflow, keep the latex-action step's inputs when they are static
 bench/corpus.json and .github/workflows/bench-corpus.yml, which runs every
 entry with the incumbent and with this action, passing identical inputs.
 
+Entries with a "group" field are added by hand (repositories without a
+latex-action workflow, such as Japanese thesis templates) and are kept.
+
 Usage: python3 tools/make_corpus.py REPOS_TSV   (or --regen to rebuild the workflow from bench/corpus.json)
   REPOS_TSV: lines "owner/repo<TAB>workflow-file-name" (extra columns ignored).
 Requires an authenticated `gh`.
@@ -175,6 +178,11 @@ def main():
             entries.append(entry)
         else:
             skipped.append((repo, why))
+    # Hand-picked entries (with a "group", e.g. Japanese templates without a workflow) are kept.
+    try:
+        entries += [e for e in json.load(open("bench/corpus.json")) if e.get("group")]
+    except FileNotFoundError:
+        pass
     ids = set()
     for e in entries:
         while e["id"] in ids:

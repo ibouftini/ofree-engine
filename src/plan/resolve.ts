@@ -24,6 +24,7 @@ export function requirementTokens(docs: DocumentPlan[], extraPackages: string[] 
     for (const l of d.languages.keys()) tokens.add(`lang:${l}`);
     for (const l of d.locales.keys()) tokens.add(`locale:${l}`);
     for (const f of d.fonts.keys()) tokens.add(`font:${f}`);
+    for (const p of d.programs.keys()) tokens.add(`program:${p}`);
   }
   for (const p of extraPackages) tokens.add(`pkg:${p}`);
   return [...tokens].sort();
@@ -135,6 +136,18 @@ export function resolvePackages(
     if (d.engine === "xelatex") want("xetex", `XeLaTeX: ${d.engineReason}`);
     if (d.bibTool === "biber") want("biber", "biblatex with Biber");
     if (d.bibTool === "bibtex") want("bibtex", "BibTeX");
+    // Japanese: the engine, the kanji font maps dvipdfmx reads, and the HaranoAji fonts they and LuaTeX-ja name.
+    if (d.engine === "platex" || d.engine === "uplatex") {
+      for (const p of [d.engine, "ptex-fontmaps", "haranoaji"]) want(p, `${d.engine === "platex" ? "pLaTeX" : "upLaTeX"}: ${d.engineReason}`);
+      if (["makeidx.sty", "imakeidx.sty", "index.sty"].some((f) => d.requires.has(f))) want(d.engine === "platex" ? "mendexk" : "upmendex", "index (Japanese)");
+    }
+    const japaneseLua = [...d.requires.keys()].find((f) => /^(luatexja.*\.sty|ltj\w+\.cls|jlreq\.cls|bxjs\w+\.cls)$/.test(f));
+    if (japaneseLua && d.engine !== "platex" && d.engine !== "uplatex") want("haranoaji", `Japanese fonts for ${japaneseLua}`);
+    // Programs a .latexmkrc runs; binaries belong to "<package>.<arch>", installed through "<package>".
+    for (const [program, ref] of d.programs) {
+      const pkg = fileIndex.get(program)?.replace(new RegExp(`\\.${arch.replace(/[.-]/g, "\\$&")}$`), "");
+      if (pkg && db.packages.has(pkg)) want(pkg, `${program} (${at(ref)})`);
+    }
 
     for (const [file, ref] of d.requires) {
       let pkg = fileIndex.get(file);

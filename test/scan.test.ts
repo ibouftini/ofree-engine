@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findRoots, listTexFiles, planDocument, stripComments } from "../src/plan/scan.js";
+import { findRoots, japaneseEngine, listTexFiles, planDocument, stripComments } from "../src/plan/scan.js";
 
 const fx = (name: string) => join(import.meta.dirname, "fixtures", name);
 
@@ -85,6 +85,29 @@ describe("planDocument", () => {
     expect(d.engineReason).toBe("\\babelposthyphenation (main.tex:4)");
     expect([...d.languages.keys()]).toEqual(["arabic"]);
     expect([...d.locales.keys()]).toEqual(["english", "greek-polytonic"]);
+  });
+
+  it("follows a .latexmkrc's DVI route and installs only the programs the document runs", () => {
+    const d = planDocument(fx("japanese-rc"), "thesis.tex");
+    expect(d.engine).toBe("uplatex");
+    expect(d.engineReason).toBe(".latexmkrc");
+    expect(d.engineFromLatexmkrc).toBe(true);
+    // BibTeX, not Biber (25 MB) nor the index tool: the document has no biblatex and no index.
+    expect([...d.programs.keys()]).toEqual(["uplatex", "dvipdfmx", "upbibtex"]);
+  });
+
+  it("chooses pLaTeX or upLaTeX from Japanese classes", () => {
+    const d = planDocument(fx("japanese-class"), "report.tex");
+    expect(d.engine).toBe("uplatex");
+    expect(d.engineReason).toBe("jsarticle [uplatex] (report.tex:1)");
+    expect(japaneseEngine("jsarticle", [])).toBe("platex");
+    expect(japaneseEngine("jarticle", [])).toBe("platex");
+    expect(japaneseEngine("ujbook", [])).toBe("uplatex");
+    expect(japaneseEngine("jlreq", [])).toBe("lualatex");
+    expect(japaneseEngine("jlreq", ["platex"])).toBe("platex");
+    expect(japaneseEngine("bxjsarticle", ["autodetect-engine", "ja=standard"])).toBe("xelatex");
+    expect(japaneseEngine("bxjsarticle", ["lualatex"])).toBe("lualatex");
+    expect(japaneseEngine("article", [])).toBeNull();
   });
 
   it("scans a local class and drops it from the TeX Live requirements", () => {
