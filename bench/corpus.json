@@ -38,16 +38,6 @@
   }
  },
  {
-  "id": "executablebooks-sphinx-design",
-  "repo": "executablebooks/sphinx-design",
-  "sha": "4f66f32e160f16d73dee5eed52cd91984935763f",
-  "with": {
-   "texlive_version": "2025",
-   "working_directory": "docs/_build/latex",
-   "root_file": "sphinxdesign.tex"
-  }
- },
- {
   "id": "fhdwpb-latex-thesis-template",
   "repo": "FHDWPB/latex-thesis-template",
   "sha": "0e73f77c440b618da1050dce1b3939c5536dcd95",
@@ -70,15 +60,6 @@
   "with": {
    "root_file": "paper.tex",
    "working_directory": "staffml/paper"
-  }
- },
- {
-  "id": "haskellfoundation-haskell-2010-revised-report",
-  "repo": "haskellfoundation/haskell-2010-revised-report",
-  "sha": "4b216d654d75ce6343d8a21b44794690965218c9",
-  "with": {
-   "working_directory": "stdlib/latex",
-   "root_file": "main.tex"
   }
  },
  {
@@ -189,28 +170,12 @@
   }
  },
  {
-  "id": "agathasamuel-tugas-akhir",
-  "repo": "AgathaSamuel/TUGAS-AKHIR",
-  "sha": "b07e49d8ebd43c0001436d73058a9595ba465918",
-  "with": {
-   "root_file": "main.tex"
-  }
- },
- {
   "id": "ahmed-alhindawi-latex-template",
   "repo": "ahmed-alhindawi/latex-template",
   "sha": "e787bb7a8555a0be130df081371163bb1649c40e",
   "with": {
    "root_file": "main.tex",
    "working_directory": "."
-  }
- },
- {
-  "id": "aliaumel-word-ordering-wqo",
-  "repo": "AliaumeL/word-ordering-wqo",
-  "sha": "ed5e2b8f6dd5681bd07e8deac31d719dc4fa0b3d",
-  "with": {
-   "root_file": "wqo-on-words.tex\nwqo-on-words.lncs.tex\nwqo-on-words.lipics.tex\n"
   }
  },
  {
@@ -425,17 +390,6 @@
    "root_file": "principal.tex",
    "latexmk_use_xelatex": "false",
    "args": "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
-  }
- },
- {
-  "id": "guilhermemarchi-guide",
-  "repo": "GuilhermeMarchi/guide",
-  "sha": "478cfa5193822f7fe7fbccb8ed86b74e30efda9e",
-  "with": {
-   "root_file": "IPLeiriaMain.tex",
-   "latexmk_use_xelatex": "true",
-   "latexmk_shell_escape": "true",
-   "extra_fonts": "./Configurations/Fonts/*.ttf\n./Configurations/Fonts/*.otf"
   }
  }
 ]

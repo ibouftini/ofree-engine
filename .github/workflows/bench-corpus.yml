@@ -157,43 +157,6 @@ jobs:
         with:
           root_file: "main.tex"
 
-  incumbent-executablebooks-sphinx-design:
-    name: incumbent · executablebooks-sphinx-design
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',executablebooks-sphinx-design,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: executablebooks/sphinx-design
-          ref: 4f66f32e160f16d73dee5eed52cd91984935763f
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          texlive_version: "2025"
-          working_directory: "docs/_build/latex"
-          root_file: "sphinxdesign.tex"
-
-  ours-executablebooks-sphinx-design:
-    name: ours · executablebooks-sphinx-design
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',executablebooks-sphinx-design,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: executablebooks/sphinx-design
-          ref: 4f66f32e160f16d73dee5eed52cd91984935763f
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          texlive_version: "2025"
-          working_directory: "docs/_build/latex"
-          root_file: "sphinxdesign.tex"
-
   incumbent-fhdwpb-latex-thesis-template:
     name: incumbent · fhdwpb-latex-thesis-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fhdwpb-latex-thesis-template,') }}
@@ -294,41 +257,6 @@ jobs:
         with:
           root_file: "paper.tex"
           working_directory: "staffml/paper"
-
-  incumbent-haskellfoundation-haskell-2010-revised-report:
-    name: incumbent · haskellfoundation-haskell-2010-revised-report
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',haskellfoundation-haskell-2010-revised-report,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: haskellfoundation/haskell-2010-revised-report
-          ref: 4b216d654d75ce6343d8a21b44794690965218c9
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          working_directory: "stdlib/latex"
-          root_file: "main.tex"
-
-  ours-haskellfoundation-haskell-2010-revised-report:
-    name: ours · haskellfoundation-haskell-2010-revised-report
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',haskellfoundation-haskell-2010-revised-report,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: haskellfoundation/haskell-2010-revised-report
-          ref: 4b216d654d75ce6343d8a21b44794690965218c9
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          working_directory: "stdlib/latex"
-          root_file: "main.tex"
 
   incumbent-iydon-sustechthesis:
     name: incumbent · iydon-sustechthesis
@@ -737,39 +665,6 @@ jobs:
           root_file: "OOBmod.tex"
           working_directory: "docs/OOBmod"
 
-  incumbent-agathasamuel-tugas-akhir:
-    name: incumbent · agathasamuel-tugas-akhir
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',agathasamuel-tugas-akhir,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: AgathaSamuel/TUGAS-AKHIR
-          ref: b07e49d8ebd43c0001436d73058a9595ba465918
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          root_file: "main.tex"
-
-  ours-agathasamuel-tugas-akhir:
-    name: ours · agathasamuel-tugas-akhir
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',agathasamuel-tugas-akhir,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: AgathaSamuel/TUGAS-AKHIR
-          ref: b07e49d8ebd43c0001436d73058a9595ba465918
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          root_file: "main.tex"
-
   incumbent-ahmed-alhindawi-latex-template:
     name: incumbent · ahmed-alhindawi-latex-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ahmed-alhindawi-latex-template,') }}
@@ -804,45 +699,6 @@ jobs:
         with:
           root_file: "main.tex"
           working_directory: "."
-
-  incumbent-aliaumel-word-ordering-wqo:
-    name: incumbent · aliaumel-word-ordering-wqo
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',aliaumel-word-ordering-wqo,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: AliaumeL/word-ordering-wqo
-          ref: ed5e2b8f6dd5681bd07e8deac31d719dc4fa0b3d
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          root_file: |
-            wqo-on-words.tex
-            wqo-on-words.lncs.tex
-            wqo-on-words.lipics.tex
-
-  ours-aliaumel-word-ordering-wqo:
-    name: ours · aliaumel-word-ordering-wqo
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',aliaumel-word-ordering-wqo,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: AliaumeL/word-ordering-wqo
-          ref: ed5e2b8f6dd5681bd07e8deac31d719dc4fa0b3d
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          root_file: |
-            wqo-on-words.tex
-            wqo-on-words.lncs.tex
-            wqo-on-words.lipics.tex
 
   incumbent-anastasia-labs-midgard:
     name: incumbent · anastasia-labs-midgard
@@ -1743,51 +1599,8 @@ jobs:
           latexmk_use_xelatex: "false"
           args: "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
 
-  incumbent-guilhermemarchi-guide:
-    name: incumbent · guilhermemarchi-guide
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',guilhermemarchi-guide,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: GuilhermeMarchi/guide
-          ref: 478cfa5193822f7fe7fbccb8ed86b74e30efda9e
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          root_file: "IPLeiriaMain.tex"
-          latexmk_use_xelatex: "true"
-          latexmk_shell_escape: "true"
-          extra_fonts: |
-            ./Configurations/Fonts/*.ttf
-            ./Configurations/Fonts/*.otf
-
-  ours-guilhermemarchi-guide:
-    name: ours · guilhermemarchi-guide
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',guilhermemarchi-guide,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: GuilhermeMarchi/guide
-          ref: 478cfa5193822f7fe7fbccb8ed86b74e30efda9e
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          root_file: "IPLeiriaMain.tex"
-          latexmk_use_xelatex: "true"
-          latexmk_shell_escape: "true"
-          extra_fonts: |
-            ./Configurations/Fonts/*.ttf
-            ./Configurations/Fonts/*.otf
-
   results:
-    needs: [incumbent-assumptionsofphysics-book, ours-assumptionsofphysics-book, incumbent-blockstreamresearch-zk-book, ours-blockstreamresearch-zk-book, incumbent-cvxgrp-cvxcla, ours-cvxgrp-cvxcla, incumbent-dcroote-stanford-thesis-example, ours-dcroote-stanford-thesis-example, incumbent-executablebooks-sphinx-design, ours-executablebooks-sphinx-design, incumbent-fhdwpb-latex-thesis-template, ours-fhdwpb-latex-thesis-template, incumbent-gboeing-cv, ours-gboeing-cv, incumbent-harvard-edge-cs249r-book, ours-harvard-edge-cs249r-book, incumbent-haskellfoundation-haskell-2010-revised-report, ours-haskellfoundation-haskell-2010-revised-report, incumbent-iydon-sustechthesis, ours-iydon-sustechthesis, incumbent-nag-devops-speed-hpc, ours-nag-devops-speed-hpc, incumbent-openhutb-neuro, ours-openhutb-neuro, incumbent-ruiguoz-nwpu-beamer, ours-ruiguoz-nwpu-beamer, incumbent-spacelab-ufsc-obdh2, ours-spacelab-ufsc-obdh2, incumbent-spamegg1-epp-discrete-math-5th-solutions, ours-spamegg1-epp-discrete-math-5th-solutions, incumbent-spamegg1-epp-discrete-math-5th-solutions-2, ours-spamegg1-epp-discrete-math-5th-solutions-2, incumbent-ucl-tdms, ours-ucl-tdms, incumbent-varaprasad6700-resume, ours-varaprasad6700-resume, incumbent-ac-pate-latex-resume, ours-ac-pate-latex-resume, incumbent-adolbyb-icom-706-mkiig, ours-adolbyb-icom-706-mkiig, incumbent-agathasamuel-tugas-akhir, ours-agathasamuel-tugas-akhir, incumbent-ahmed-alhindawi-latex-template, ours-ahmed-alhindawi-latex-template, incumbent-aliaumel-word-ordering-wqo, ours-aliaumel-word-ordering-wqo, incumbent-anastasia-labs-midgard, ours-anastasia-labs-midgard, incumbent-andstor-tex-paper-template, ours-andstor-tex-paper-template, incumbent-bagaswizard-buku-ta, ours-bagaswizard-buku-ta, incumbent-bipplane-resume-latex, ours-bipplane-resume-latex, incumbent-cao-wuhui-szu-latex-master-template, ours-cao-wuhui-szu-latex-master-template, incumbent-capitan-parrot-salary-estimator, ours-capitan-parrot-salary-estimator, incumbent-cengkooo-proposal-imul-123140205, ours-cengkooo-proposal-imul-123140205, incumbent-ctex-org-lshort-zh-cn, ours-ctex-org-lshort-zh-cn, incumbent-david-alvarez-rosa-curriculum-vitae, ours-david-alvarez-rosa-curriculum-vitae, incumbent-diebrate-diebrate-github-io, ours-diebrate-diebrate-github-io, incumbent-digama0-conzf, ours-digama0-conzf, incumbent-digo-certify-digo-certify-app, ours-digo-certify-digo-certify-app, incumbent-dknaack-master-thesis, ours-dknaack-master-thesis, incumbent-dr-richard-barker-osdr-x-species-v2, ours-dr-richard-barker-osdr-x-species-v2, incumbent-eagleoutice-eagle-maps, ours-eagleoutice-eagle-maps, incumbent-erik-donath-mutau-rv32-soc, ours-erik-donath-mutau-rv32-soc, incumbent-fascetta-tool-lora-skill-ir, ours-fascetta-tool-lora-skill-ir, incumbent-feathbow-tju-rl-template, ours-feathbow-tju-rl-template, incumbent-firefly-cpp-cover-letter-latex, ours-firefly-cpp-cover-letter-latex, incumbent-fmuro-alg1, ours-fmuro-alg1, incumbent-franzmohr-fincommons, ours-franzmohr-fincommons, incumbent-garebear99-freeeq8, ours-garebear99-freeeq8, incumbent-ghdaru-tesedaru, ours-ghdaru-tesedaru, incumbent-guilhermemarchi-guide, ours-guilhermemarchi-guide]
+    needs: [incumbent-assumptionsofphysics-book, ours-assumptionsofphysics-book, incumbent-blockstreamresearch-zk-book, ours-blockstreamresearch-zk-book, incumbent-cvxgrp-cvxcla, ours-cvxgrp-cvxcla, incumbent-dcroote-stanford-thesis-example, ours-dcroote-stanford-thesis-example, incumbent-fhdwpb-latex-thesis-template, ours-fhdwpb-latex-thesis-template, incumbent-gboeing-cv, ours-gboeing-cv, incumbent-harvard-edge-cs249r-book, ours-harvard-edge-cs249r-book, incumbent-iydon-sustechthesis, ours-iydon-sustechthesis, incumbent-nag-devops-speed-hpc, ours-nag-devops-speed-hpc, incumbent-openhutb-neuro, ours-openhutb-neuro, incumbent-ruiguoz-nwpu-beamer, ours-ruiguoz-nwpu-beamer, incumbent-spacelab-ufsc-obdh2, ours-spacelab-ufsc-obdh2, incumbent-spamegg1-epp-discrete-math-5th-solutions, ours-spamegg1-epp-discrete-math-5th-solutions, incumbent-spamegg1-epp-discrete-math-5th-solutions-2, ours-spamegg1-epp-discrete-math-5th-solutions-2, incumbent-ucl-tdms, ours-ucl-tdms, incumbent-varaprasad6700-resume, ours-varaprasad6700-resume, incumbent-ac-pate-latex-resume, ours-ac-pate-latex-resume, incumbent-adolbyb-icom-706-mkiig, ours-adolbyb-icom-706-mkiig, incumbent-ahmed-alhindawi-latex-template, ours-ahmed-alhindawi-latex-template, incumbent-anastasia-labs-midgard, ours-anastasia-labs-midgard, incumbent-andstor-tex-paper-template, ours-andstor-tex-paper-template, incumbent-bagaswizard-buku-ta, ours-bagaswizard-buku-ta, incumbent-bipplane-resume-latex, ours-bipplane-resume-latex, incumbent-cao-wuhui-szu-latex-master-template, ours-cao-wuhui-szu-latex-master-template, incumbent-capitan-parrot-salary-estimator, ours-capitan-parrot-salary-estimator, incumbent-cengkooo-proposal-imul-123140205, ours-cengkooo-proposal-imul-123140205, incumbent-ctex-org-lshort-zh-cn, ours-ctex-org-lshort-zh-cn, incumbent-david-alvarez-rosa-curriculum-vitae, ours-david-alvarez-rosa-curriculum-vitae, incumbent-diebrate-diebrate-github-io, ours-diebrate-diebrate-github-io, incumbent-digama0-conzf, ours-digama0-conzf, incumbent-digo-certify-digo-certify-app, ours-digo-certify-digo-certify-app, incumbent-dknaack-master-thesis, ours-dknaack-master-thesis, incumbent-dr-richard-barker-osdr-x-species-v2, ours-dr-richard-barker-osdr-x-species-v2, incumbent-eagleoutice-eagle-maps, ours-eagleoutice-eagle-maps, incumbent-erik-donath-mutau-rv32-soc, ours-erik-donath-mutau-rv32-soc, incumbent-fascetta-tool-lora-skill-ir, ours-fascetta-tool-lora-skill-ir, incumbent-feathbow-tju-rl-template, ours-feathbow-tju-rl-template, incumbent-firefly-cpp-cover-letter-latex, ours-firefly-cpp-cover-letter-latex, incumbent-fmuro-alg1, ours-fmuro-alg1, incumbent-franzmohr-fincommons, ours-franzmohr-fincommons, incumbent-garebear99-freeeq8, ours-garebear99-freeeq8, incumbent-ghdaru-tesedaru, ours-ghdaru-tesedaru]
     if: always()
     runs-on: ubuntu-latest
     steps:
