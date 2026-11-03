@@ -65,6 +65,11 @@ On the samples in [`bench/samples`](bench/samples), build step only (one run, 20
 | arabic (XeLaTeX, polyglossia, Amiri) | 118 s | 25 s | 4 s |
 | lua (LuaLaTeX, unicode-math, IEEE style) | 111 s | 29 s | 9 s |
 | cv (local class, FontAwesome, Source Sans 3) | 88 s | 21 s | 6 s |
+| book (chapters with `\include`, BibTeX/natbib, index, appendix) | 82 s | 15 s | 12 s |
+| beamer (metropolis theme, overlays, TikZ) | 64 s | 27 s | 15 s |
+| glossary (glossaries, acronyms, nomenclature) | 59 s | 34 s | 14 s |
+
+The last three rows come from a second run on the same day. In this action's output for them, the glossary, acronyms and nomenclature are filled in, the book's references, index and lists resolve, and the overlay frame becomes two pages. latexmk does not run the glossary and nomenclature tools by itself; this action adds those rules.
 
 A first run here spends about 11 s installing about 150 packages, 7 s building formats and font indexes, and the rest compiling.
 
