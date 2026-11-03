@@ -40,6 +40,9 @@ inputs:
     description: Bash commands to run before compiling.
   post_compile:
     description: Bash commands to run after compiling.
+  on_error:
+    description: fail (default) or warn. LaTeX errors never stop the build; with fail the step fails, with warn it passes as long as a PDF was built. The PDF is uploaded either way.
+    default: fail
   continue_on_error:
     description: Accepted for compatibility. Every document is always built; the step fails if any fails.
     default: "false"
@@ -63,7 +66,7 @@ outputs:
   pdf:
     description: Paths of the produced PDFs, one per line.
   status:
-    description: success or failure.
+    description: success, errors (PDFs built through LaTeX errors) or failure (a document has no PDF).
 
 runs:
   using: node24

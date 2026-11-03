@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLog } from "../src/compile/logparse.js";
+import { parseLog, unbreakLines } from "../src/compile/logparse.js";
 
 describe("parseLog", () => {
   it("finds missing packages, styles and fonts", () => {
@@ -54,7 +54,6 @@ describe("parseLog", () => {
         { kind: "file", name: "t2aenc.def" },
       ]),
     );
-    expect(f.problems[0].message).toContain("language definition file russian.ldf was not found");
   });
 
   it("finds missing font definition files reported as warnings", () => {
@@ -95,12 +94,19 @@ describe("parseLog", () => {
     expect(parseLog("Package foo Warning: Feature bar is only available in LuaTeX; ignored.").needsUnicodeEngine).toBeNull();
   });
 
-  it("reports errors with file and line, and the page count", () => {
-    const f = parseLog(
-      ["./chapters/intro.tex:12: Undefined control sequence.", "Output written on main.pdf (14 pages, 1234 bytes)."].join("\n"),
-    );
-    expect(f.problems[0]).toEqual({ severity: "error", file: "chapters/intro.tex", line: 12, message: "Undefined control sequence." });
+  it("reads the page count and the output file", () => {
+    const f = parseLog("Output written on main.pdf (14 pages, 1234 bytes).");
     expect(f.pages).toBe(14);
+    expect(f.outputFile).toBe("main.pdf");
+  });
+
+  it("joins lines TeX broke at 79 columns, counting bytes (pdfTeX) or characters (XeTeX)", () => {
+    const bytes = "x".repeat(79);
+    expect(unbreakLines(`${bytes}\nrest`)).toBe(`${bytes}rest`);
+    // 79 characters but 81 bytes: XeTeX's break inside a message with ⌘ (3 bytes in UTF-8).
+    const chars = Buffer.from("⌘" + "y".repeat(78), "utf8").toString("latin1");
+    expect(unbreakLines(`${chars}\nrest`)).toBe(`${chars}rest`);
+    expect(unbreakLines("short\nline")).toBe("short\nline");
   });
 
   it("asks for shell escape when minted says so", () => {

@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors"]') }}
         cache: [true, false]
     steps:
       - uses: actions/checkout@v5
@@ -36,6 +36,8 @@ jobs:
           working_directory: bench/samples/${{ matrix.doc }}
           cache: ${{ matrix.cache }}
           artifact_name: pdf-${{ matrix.doc }}-${{ matrix.cache }}
+          # The errors sample has LaTeX errors on purpose: its PDF and summary are what to check.
+          on_error: ${{ matrix.doc == 'errors' && 'warn' || 'fail' }}
 
   incumbent:
     name: incumbent · ${{ matrix.doc }}
@@ -43,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry"]') }}
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: xu-cheng/latex-action@v4

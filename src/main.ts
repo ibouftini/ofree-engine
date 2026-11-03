@@ -11,7 +11,7 @@ import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, languagePackages, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
-import { annotate, summaryMarkdown } from "./report.js";
+import { annotate, digestText, summaryMarkdown } from "./report.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
 import { closure } from "./tl/tlpdb.js";
 import { run, seconds } from "./util/exec.js";
@@ -268,6 +268,8 @@ async function main() {
     compiler: core.getInput("compiler") || "latexmk",
     args: userArgs ? userArgs.split(/\s+/).filter((a) => !/^-(pdf|xelatex|lualatex|pdflua|pdfxe)$/.test(a)) : ["-interaction=nonstopmode", "-file-line-error", "-halt-on-error"],
     shellEscape: bool("latexmk_shell_escape") ? "always" : ((core.getInput("shell_escape") || "auto") as CompileOptions["shellEscape"]),
+    // Build through errors unless the workflow's own args ask to stop at the first one.
+    keepGoing: !userArgs.split(/\s+/).includes("-halt-on-error"),
     concurrency: Math.max(1, cpus().length),
     log: (m) => core.info(m),
   };
@@ -279,9 +281,8 @@ async function main() {
   const results = await compileAll(workspace, docs, opts, () => tl.env(), recovery);
   phases.compile = seconds(t);
   for (const r of results) {
-    core.startGroup(`${r.doc.root}: ${r.ok ? "built" : "failed"} (log)`);
-    const errors = r.findings.problems.filter((p) => p.severity === "error");
-    if (errors.length) core.info(`Errors:\n${errors.map((p) => `  ${p.file ? `${p.file}:${p.line}: ` : ""}${p.message}`).join("\n")}\n`);
+    core.info(digestText(r));
+    core.startGroup(`${r.doc.root}: full log`);
     core.info(`--- ${r.doc.root}: build program output (end) ---\n${r.runOutput.slice(-20_000)}`);
     core.info(`--- ${r.doc.root}: engine log (end) ---\n${r.output.slice(r.runOutput.length).slice(-20_000)}`);
     core.endGroup();
@@ -292,7 +293,10 @@ async function main() {
   t = performance.now();
   const pdfs = results.filter((r) => r.pdf).map((r) => r.pdf!);
   core.setOutput("pdf", pdfs.join("\n"));
-  core.setOutput("status", results.every((r) => r.ok) ? "success" : "failure");
+  const failed = results.filter((r) => r.status === "failed");
+  const withErrors = results.filter((r) => r.status === "errors");
+  core.setOutput("status", failed.length ? "failure" : withErrors.length ? "errors" : "success");
+  const onError = core.getInput("on_error") === "warn" ? "warn" : "fail";
   let artifactUrl: string | undefined;
   if (process.env.GITHUB_ACTIONS === "true" && core.getInput("upload") !== "false" && pdfs.length > 0) {
     try {
@@ -305,7 +309,7 @@ async function main() {
     }
   }
   phases.publish = seconds(t);
-  annotate(results);
+  annotate(results, onError);
   if (process.env.GITHUB_STEP_SUMMARY) {
     await core.summary
       .addRaw(
@@ -330,11 +334,15 @@ async function main() {
     if (key) core.info(`Saved TeX Live to the cache as ${key} in ${seconds(t)} s`);
   }
 
-  // Every document is always built; like xu-cheng/latex-action with
-  // continue_on_error, the step still fails if any document failed.
-  const failed = results.filter((r) => !r.ok);
+  // Every document is always built; the step fails if one has no PDF, or has
+  // LaTeX errors (its PDF is still uploaded) unless on_error is "warn".
   if (failed.length > 0) {
     core.setFailed(`${failed.length} of ${results.length} documents could not be built: ${failed.map((r) => r.doc.root).join(", ")}`);
+  } else if (withErrors.length > 0 && onError === "fail") {
+    core.setFailed(
+      `LaTeX errors in ${withErrors.map((r) => `${r.doc.root} (${r.diagnosis.errors.length})`).join(", ")}. ` +
+        `The PDF${withErrors.length > 1 ? "s were" : " was"} built and uploaded anyway; set on_error: warn to let the step pass.`,
+    );
   }
 }
 

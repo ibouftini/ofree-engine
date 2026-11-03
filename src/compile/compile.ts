@@ -1,11 +1,14 @@
-// Compiles documents in parallel. A failed attempt is retried only when the
-// engine can fix the cause itself: something missing, the wrong engine, or a
-// disabled shell escape the document requires.
+// Compiles documents in parallel. A failed attempt is retried when the engine
+// can fix the cause itself: something missing, the wrong engine, or a disabled
+// shell escape the document requires. When only the document's own errors
+// remain, a last attempt builds through them, as Overleaf does, so there is
+// still a PDF.
 
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { DocumentPlan, Engine } from "../plan/scan.js";
 import { pool, run, seconds } from "../util/exec.js";
+import { diagnose, type Diagnosis, type SourceContext } from "./diagnose.js";
 import { parseLog, type LogFindings, type Missing } from "./logparse.js";
 
 export interface CompileOptions {
@@ -16,6 +19,8 @@ export interface CompileOptions {
   log?: (message: string) => void;
   /** Extra latexmk rc file (EXTRA_LATEXMKRC written to disk), loaded with -r. */
   extraRc?: string;
+  /** Build through LaTeX errors (latexmk -f, no -halt-on-error) when nothing else can be fixed. */
+  keepGoing: boolean;
 }
 
 /**
@@ -76,6 +81,8 @@ export interface Recovery {
 
 export interface DocumentResult {
   doc: DocumentPlan;
+  /** ok: a PDF without errors; errors: a PDF built through LaTeX errors; failed: no PDF. */
+  status: "ok" | "errors" | "failed";
   ok: boolean;
   engine: Engine;
   shellEscape: boolean;
@@ -87,6 +94,8 @@ export interface DocumentResult {
   installed: string[];
   notes: string[];
   findings: LogFindings;
+  /** What the user must fix, from the last attempt's .log and .blg. */
+  diagnosis: Diagnosis;
   /** Build program output followed by the engine's .log (and .blg). */
   output: string;
   /** Build program output only. */
@@ -103,10 +112,12 @@ async function attempt(
   engine: Engine,
   shellEscape: boolean,
   force: boolean,
+  keepGoing: boolean,
   opts: CompileOptions,
   env: NodeJS.ProcessEnv,
 ) {
   const cwd = resolve(workspace, doc.cwd);
+  const started = Date.now();
   let r;
   if (opts.compiler === "latexmk") {
     const args: string[] = [];
@@ -114,7 +125,10 @@ async function attempt(
     // Respect a route the user chose (-pdfdvi, -pdfps for PSTricks), and a .latexmkrc's engine.
     const userMode = opts.args.some((a) => MODE_FLAGS.test(a));
     if (!userMode && (!doc.engineFromLatexmkrc || engine !== doc.engine)) args.push(ENGINE_FLAG[engine]);
-    args.push(...opts.args);
+    if (keepGoing) {
+      args.push(...opts.args.filter((a) => a !== "-halt-on-error"), "-f");
+      if (!opts.args.some((a) => a.startsWith("-interaction"))) args.push("-interaction=nonstopmode");
+    } else args.push(...opts.args);
     if (shellEscape) args.push("-shell-escape");
     if (force) args.push("-g");
     args.push(doc.target);
@@ -127,14 +141,42 @@ async function attempt(
   const outDir = outputDirectory(cwd, opts.args);
   const dirs = [...new Set([outDir ? resolve(cwd, outDir) : cwd, cwd, resolve(cwd, dirname(doc.target))])];
   let output = r.output;
+  const files: Record<string, string> = {};
   for (const ext of [".log", ".blg"]) {
     const path = dirs.map((d) => join(d, job + ext)).find((p) => existsSync(p));
-    if (path) output += `\n==> ${job}${ext}\n` + readFileSync(path, "latin1");
+    if (path) output += `\n==> ${job}${ext}\n` + (files[ext] = readFileSync(path, "latin1"));
   }
   const written = /Output written on "?([^"\n(]+?)\.(?:pdf|xdv|dvi)"?\s*\(/g;
   const fromLog = [...r.output.matchAll(written)].map((m) => resolve(cwd, m[1].trim() + ".pdf"));
-  const pdfAbs = [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find((p) => existsSync(p));
-  return { code: r.code, output, runOutput: r.output, pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
+  // A PDF counts only if this attempt wrote it: repositories often commit an old one.
+  const upToDate = r.code === 0 && /All targets .* are up-to-date/.test(r.output);
+  const fresh = (p: string) => existsSync(p) && (upToDate || statSync(p).mtimeMs >= started - 2000);
+  const pdfAbs = [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find(fresh);
+  return { code: r.code, output, runOutput: r.output, log: files[".log"], blg: files[".blg"], pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
+}
+
+/** Project files whose path differs from `name` only by case, extension or folder: why a figure is usually "not found". */
+export function similarFiles(dir: string, name: string): string[] {
+  const want = name.replace(/^\.\//, "").toLowerCase();
+  const stem = (p: string) => p.replace(/\.[^./]+$/, "");
+  const out: string[] = [];
+  let seen = 0;
+  const walk = (d: string, depth: number) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (++seen > 20_000 || out.length >= 3) return;
+      if (e.name.startsWith(".") || e.name === "node_modules") continue;
+      const full = join(d, e.name);
+      if (e.isDirectory()) {
+        if (depth < 6) walk(full, depth + 1);
+        continue;
+      }
+      const rel = relative(dir, full);
+      const l = rel.toLowerCase();
+      if (rel !== name && (l === want || stem(l) === stem(want) || basename(l) === basename(want))) out.push(rel);
+    }
+  };
+  walk(dir, 0);
+  return out;
 }
 
 export async function compileDocument(
@@ -151,6 +193,7 @@ export async function compileDocument(
   const notes: string[] = [];
   let force = false;
   let retriedAfterFonts = false;
+  let keepGoing = false;
   const triedEngines = new Set<Engine>([engine]);
   let last!: Awaited<ReturnType<typeof attempt>>;
   let findings!: LogFindings;
@@ -158,10 +201,10 @@ export async function compileDocument(
 
   while (rounds < MAX_ROUNDS) {
     rounds++;
-    last = await attempt(workspace, doc, engine, shellEscape, force, opts, env());
+    last = await attempt(workspace, doc, engine, shellEscape, force, keepGoing, opts, env());
     findings = parseLog(last.output);
     opts.log?.(
-      `${doc.root}: attempt ${rounds} with ${ENGINE_NAME[engine]}${shellEscape ? " (shell escape)" : ""}: exit ${last.code}, ` +
+      `${doc.root}: attempt ${rounds} with ${ENGINE_NAME[engine]}${shellEscape ? " (shell escape)" : ""}${keepGoing ? " (through errors)" : ""}: exit ${last.code}, ` +
         `pdf ${last.pdf ?? "none"}; missing [${findings.missing.map((m) => `${m.kind}:${m.name}`).join(", ")}]` +
         (findings.needsUnicodeEngine ? `; needs ${findings.needsUnicodeEngine}` : "") +
         (findings.needsShellEscape ? "; asks for shell escape" : ""),
@@ -200,12 +243,39 @@ export async function compileDocument(
       force = true;
       continue;
     }
+    if (opts.keepGoing && opts.compiler === "latexmk" && !keepGoing) {
+      keepGoing = true;
+      force = true;
+      continue;
+    }
     break;
   }
 
+  const cwdAbs = resolve(workspace, doc.cwd);
+  const context: SourceContext = {
+    sources: () =>
+      doc.sources.flatMap((f) => {
+        try {
+          return [{ file: relative(cwdAbs, join(workspace, f)), text: readFileSync(join(workspace, f), "utf8") }];
+        } catch {
+          return [];
+        }
+      }),
+    similarFiles: (name) => similarFiles(cwdAbs, name),
+  };
+  // Files in the log are relative to the compile directory, or absolute (TeX Live's own files).
+  const inProject = (f: string) => {
+    const abs = resolve(cwdAbs, f);
+    return abs.startsWith(workspace + sep) ? relative(cwdAbs, abs) : undefined;
+  };
+  const diagnosis = diagnose(last.log ?? last.runOutput, last.blg ?? "", context, inProject);
+  const status = last.pdf && last.code === 0 ? "ok" : last.pdf && keepGoing ? "errors" : "failed";
+  if (status === "errors") notes.push("Built through LaTeX errors, as Overleaf does");
+
   return {
     doc,
-    ok: last.code === 0 && last.pdf !== null,
+    status,
+    ok: status === "ok",
     engine,
     shellEscape,
     pdf: last.pdf,
@@ -215,6 +285,7 @@ export async function compileDocument(
     installed,
     notes,
     findings,
+    diagnosis,
     output: last.output,
     runOutput: last.runOutput,
   };
@@ -229,14 +300,15 @@ export async function compileAll(
 ): Promise<DocumentResult[]> {
   const results = await pool(docs, opts.concurrency, (doc) => compileDocument(workspace, doc, opts, env, recovery));
   // A document may use another's output (a figure built as its own document).
-  // Built in parallel it can start too early, so retry failures one by one, in
-  // order, once everything else is done.
+  // Built in parallel it can start too early, so retry the ones that missed a
+  // file, one by one, in order, once everything else is done.
+  const missedFile = (r: DocumentResult) => r.diagnosis.errors.some((e) => /not found/.test(e.message));
   if (results.some((r) => r.ok) && results.some((r) => !r.ok)) {
     for (let i = 0; i < results.length; i++) {
-      if (results[i].ok) continue;
+      if (results[i].ok || !missedFile(results[i])) continue;
       opts.log?.(`${docs[i].root}: building again after the other documents`);
       const again = await compileDocument(workspace, docs[i], opts, env, recovery);
-      if (again.ok) {
+      if (again.ok || (again.status === "errors" && results[i].status === "failed")) {
         again.notes.unshift("Built after the other documents, whose output it uses");
         results[i] = again;
       }

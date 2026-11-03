@@ -22,7 +22,9 @@ Nothing else is needed. The action:
 - **Picks the engine** (pdfLaTeX, XeLaTeX or LuaLaTeX) from `% !TeX program`, `.latexmkrc` or the packages used, and says why.
 - **Installs only what the documents need:** the TeX Live packages, languages and fonts it reads from the sources. Anything still missing while compiling is installed and the document retried.
 - **Keeps that TeX Live in the Actions cache,** so later runs start in seconds.
-- **Uploads the PDFs as an artifact** and writes a summary, with errors marked on the right file and line.
+- **Builds through LaTeX errors,** as Overleaf does: an undefined command or a missing figure still gives a PDF (with `??` where references are missing).
+- **Explains what to fix:** the summary lists each real error once, at its file and line, with the command or text where TeX stopped and a plain-language hint. Errors that only follow from an earlier one are left out, and undefined references, citations and characters a font lacks are grouped.
+- **Uploads the PDFs as an artifact,** also when they have errors.
 
 ### Coming from `xu-cheng/latex-action`
 
@@ -32,13 +34,16 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 
 | Input | Default | Meaning |
 |---|---|---|
+| `on_error` | `fail` | With `fail`, LaTeX errors fail the step (the PDF is still uploaded); with `warn`, the step passes when a PDF was built |
 | `shell_escape` | `auto` | `auto` enables it only for documents that need it (minted, svg, …); `always`; `never` |
 | `extra_packages` | | TeX Live packages to add to the ones found automatically |
 | `cache` | `true` | Reuse TeX Live across runs |
 | `upload` | `true` | Upload the PDFs as a workflow artifact |
 | `artifact_name` | `pdf` | Name of that artifact |
 
-Outputs: `pdf` (paths of the PDFs, one per line) and `status`.
+Outputs: `pdf` (paths of the PDFs, one per line) and `status`: `success`, `errors` (PDFs built through LaTeX errors) or `failure` (a document has no PDF).
+
+If the workflow's `args` include `-halt-on-error`, the build stops at the first error instead, as it did with `xu-cheng/latex-action`.
 
 ## How it compares
 

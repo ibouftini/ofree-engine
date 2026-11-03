@@ -1,0 +1,35 @@
+% Mistakes Overleaf forgives: undefined commands, math outside $...$, a figure
+% referenced with the wrong extension, mismatched environments, an extra table
+% column, text before \item, an undefined label and citation, characters
+% pdfLaTeX cannot print. A PDF should still be built, with each error explained.
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage[colorlinks]{hyperref}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{refs.bib}
+\title{A paper with the errors Overleaf forgives}
+\begin{document}
+\maketitle
+\section{Intro}\label{sec:intro}
+We use \mycommand{x} here, see Section~\ref{sec:missing} and \cite{knuth84,nobody99}.
+A formula without dollars: x^2 + y_1.
+\input{chapters/one}
+\begin{figure}[h]
+  \includegraphics[width=\linewidth]{figures/plot.jpg}
+  \caption{A missing figure}
+\end{figure}
+\begin{tabular}{ll}
+  a & b & c \\
+\end{tabular}
+\begin{itemize}
+  text before an item
+  \item fine
+\end{itemize}
+\begin{equation}
+  a = b \\
+\end{equation}
+Averyveryveryverylongwordthatcannotbehyphenatedanywhereatallandwillcauseanoverfullboxforsure.
+Unicode outside the font: ★ and 中.
+\end{document}

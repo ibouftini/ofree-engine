@@ -2,7 +2,8 @@
 
 import * as core from "@actions/core";
 import { ENGINE_NAME, type DocumentResult } from "./compile/compile.js";
-import { RENAMED_FONTS, type Resolution } from "./plan/resolve.js";
+import type { Issue } from "./compile/diagnose.js";
+import type { Resolution } from "./plan/resolve.js";
 
 export interface RunFacts {
   results: DocumentResult[];
@@ -18,31 +19,102 @@ export interface RunFacts {
 }
 
 const esc = (s: string) => s.replace(/\|/g, "\\|").replace(/</g, "&lt;");
+/** Inline code that survives backticks in the text. */
+const code = (s: string) => (s.includes("`") ? `\`\` ${s.replace(/\n/g, " ")} \`\`` : `\`${s.replace(/\n/g, " ")}\``);
+const plain = (s: string) => s.replace(/\*\*/g, "");
 
-export function annotate(results: DocumentResult[]) {
+/** Path of a file the log names (relative to the compile directory), relative to the repository. */
+const repoPath = (r: DocumentResult, file: string) => (r.doc.cwd === "." ? file : `${r.doc.cwd}/${file}`);
+
+function sourceLink(path: string, line?: number): string {
+  const label = code(line ? `${path}:${line}` : path);
+  const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_SHA: sha } = process.env;
+  return server && repo && sha ? `[${label}](${server}/${repo}/blob/${sha}/${path}${line ? `#L${line}` : ""})` : label;
+}
+
+/** "Undefined control sequence: `\foo`" or "Missing $ inserted, near `x^`". */
+function describe(e: Issue): string {
+  const message = e.message.replace(/\.$/, "");
+  if (!e.culprit) return message;
+  return /^Undefined control sequence|Environment/.test(e.message) ? `${message}: ${code(e.culprit)}` : `${message}, near ${code(e.culprit)}`;
+}
+
+/** Errors become workflow annotations on the file and line (warnings when the step is not to fail on them). */
+export function annotate(results: DocumentResult[], onError: "fail" | "warn" = "fail") {
   for (const r of results) {
-    if (r.ok) continue;
-    const errors = r.findings.problems.filter((p) => p.severity === "error").slice(0, 10);
+    if (r.status === "ok") continue;
+    const report = r.status === "errors" && onError === "warn" ? core.warning : core.error;
+    const errors = r.diagnosis.errors.slice(0, 10);
     if (errors.length === 0) {
-      core.error(`${r.doc.root} could not be built. See the log of this step for details.`, { file: r.doc.root });
+      report(`${r.doc.root} could not be built. See the log of this step for details.`, { file: r.doc.root });
       continue;
     }
-    for (const p of errors) {
-      const file = p.file ? (r.doc.cwd === "." ? p.file : `${r.doc.cwd}/${p.file}`) : r.doc.root;
-      core.error(p.message, { title: `LaTeX error in ${r.doc.root}`, file, startLine: p.line });
+    for (const e of errors) {
+      const text = describe(e) + (e.hint ? `\n${plain(e.hint)}` : "");
+      const file = e.file ? repoPath(r, e.file) : r.doc.root;
+      report(text, { title: `LaTeX error in ${r.doc.root}`, file, startLine: e.file ? e.lines[0] : undefined });
     }
   }
 }
 
+/** The same digest as the summary, as plain text for the step's log. */
+export function digestText(r: DocumentResult): string {
+  const d = r.diagnosis;
+  const out: string[] = [];
+  const head = r.status === "ok" ? "built" : r.status === "errors" ? `PDF built through ${d.errors.length} LaTeX error(s)` : "could not be built";
+  out.push(`${r.doc.root}: ${head}`);
+  for (const e of d.errors.slice(0, 15)) {
+    const where = e.file ? `${repoPath(r, e.file)}:${e.lines.join(",")}` : e.source ? `(${e.source})` : "";
+    out.push(`  ✗ ${where} ${describe(e)}`.trimEnd());
+    if (e.hint) out.push(`      ${plain(e.hint)}`);
+  }
+  if (d.references.length) out.push(`  ! Undefined references: ${d.references.map((x) => x.key).join(", ")}`);
+  if (d.citations.length) out.push(`  ! Undefined citations: ${d.citations.map((x) => x.key + (x.missing ? " (not in the .bib files)" : "")).join(", ")}`);
+  for (const g of d.glyphs) out.push(`  ! The font ${g.font} has no ${g.char} (${g.count}×, blank in the PDF)`);
+  return out.join("\n");
+}
+
+function documentSection(r: DocumentResult): string[] {
+  const d = r.diagnosis;
+  const lines: string[] = [];
+  const n = d.errors.length;
+  if (r.status !== "ok") {
+    lines.push(`### ${code(r.doc.root)}: ${r.status === "errors" ? `PDF built through ${n} error${n === 1 ? "" : "s"}` : "no PDF"}`, "");
+    if (n === 0) lines.push("No LaTeX error message was found; see the log of this step.", "");
+    d.errors.slice(0, 10).forEach((e, i) => {
+      const where = e.file ? sourceLink(repoPath(r, e.file), e.lines[0]) + (e.lines.length > 1 ? ` (also line${e.lines.length > 2 ? "s" : ""} ${e.lines.slice(1, 6).join(", ")})` : "") : e.source ? `in ${code(e.source)}` : "";
+      lines.push(`${i + 1}. ${where}${where ? " — " : ""}**${esc(describe(e))}**`);
+      if (e.hint) lines.push(`   <br>${esc(e.hint)}`);
+    });
+    if (n > 10) lines.push(`\n…and ${n - 10} more in the log of this step.`);
+    lines.push("");
+  }
+  const notes: string[] = [];
+  if (d.references.length) notes.push(`**Undefined references** (\`??\` in the PDF): ${d.references.slice(0, 10).map((x) => code(x.key)).join(", ")}`);
+  if (d.citations.length) {
+    notes.push(`**Undefined citations**: ${d.citations.slice(0, 10).map((x) => code(x.key) + (x.missing ? " (not in the .bib files)" : "")).join(", ")}`);
+  }
+  if (d.glyphs.length) notes.push(`**Characters the font lacks** (blank in the PDF): ${d.glyphs.slice(0, 8).map((g) => `${esc(g.char)} in ${esc(g.font)} (${g.count}×)`).join(", ")}`);
+  if (notes.length) {
+    if (r.status === "ok") lines.push(`### ${code(r.doc.root)}: built, with warnings`, "");
+    lines.push(...notes.map((x) => `- ${x}`), "");
+  }
+  const other = [...d.warnings.map(esc)];
+  if (d.overfull + d.underfull) other.push(`${d.overfull} overfull and ${d.underfull} underfull boxes (text sticking out of, or spread across, a line)`);
+  if (other.length) lines.push(`<details><summary>Other warnings in ${code(r.doc.root)} (${other.length})</summary>`, "", ...other.map((w) => `- ${w}`), "", "</details>", "");
+  return lines;
+}
+
 export function summaryMarkdown(f: RunFacts): string {
-  const ok = f.results.filter((r) => r.ok);
-  const failed = f.results.filter((r) => !r.ok);
+  const failed = f.results.filter((r) => r.status === "failed");
+  const withErrors = f.results.filter((r) => r.status === "errors");
   const total = Object.values(f.phases).reduce((a, b) => a + b, 0);
   const lines: string[] = [];
 
-  if (failed.length === 0) lines.push(`## ✅ Your PDFs are ready`);
-  else if (ok.length === 0) lines.push(`## ❌ No document could be built`);
-  else lines.push(`## ⚠️ ${failed.length} of ${f.results.length} documents could not be built`);
+  if (failed.length === f.results.length) lines.push(`## ❌ No document could be built`);
+  else if (failed.length) lines.push(`## ❌ ${failed.length} of ${f.results.length} documents could not be built`);
+  else if (withErrors.length) lines.push(`## ⚠️ PDF${f.results.length > 1 ? "s" : ""} built, with LaTeX errors to fix`);
+  else lines.push(`## ✅ Your PDFs are ready`);
   lines.push("");
   lines.push(`Built in ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
     (f.artifactUrl ? ` [Download the PDFs](${f.artifactUrl})` : ""));
@@ -51,30 +123,12 @@ export function summaryMarkdown(f: RunFacts): string {
   lines.push("|---|---|---:|---|---:|");
   for (const r of f.results) {
     const engine = `${ENGINE_NAME[r.engine]} <sub>${esc(r.engine === r.doc.engine ? r.doc.engineReason : "switched while compiling")}</sub>`;
-    const result = r.ok ? `✅ ${esc(r.pdf ?? "")}` : "❌ failed";
+    const n = r.diagnosis.errors.length;
+    const result = r.status === "ok" ? `✅ ${esc(r.pdf ?? "")}` : r.status === "errors" ? `⚠️ ${esc(r.pdf ?? "")}, ${n} error${n === 1 ? "" : "s"}` : "❌ no PDF";
     lines.push(`| \`${esc(r.doc.root)}\` | ${engine} | ${r.pages ?? "—"} | ${result} | ${r.seconds.toFixed(1)} s |`);
   }
   lines.push("");
-
-  for (const r of failed) {
-    const errors = r.findings.problems.filter((p) => p.severity === "error").slice(0, 5);
-    lines.push(`**${esc(r.doc.root)}** — a problem in the document:`);
-    if (errors.length === 0) lines.push("- No error message was found; see the log of this step.");
-    for (const p of errors) lines.push(`- ${p.file ? `\`${esc(p.file)}:${p.line}\` ` : ""}${esc(p.message)}`);
-    for (const m of r.findings.missing) {
-      const renamed = m.kind === "font" ? RENAMED_FONTS[m.name.toLowerCase()] : undefined;
-      if (renamed) lines.push(`- **Likely fix:** TeX Live now names the font "${esc(m.name)}" **"${renamed}"**. Use that name in your document.`);
-      else if (m.kind === "font") lines.push(`- The font "${esc(m.name)}" is not part of TeX Live. Add its files to the repository and list them in \`extra_fonts\`.`);
-    }
-    lines.push("");
-  }
-  for (const r of ok) {
-    const warnings = r.findings.problems.filter((p) => p.severity === "warning").slice(0, 5);
-    if (warnings.length) {
-      lines.push(`⚠️ **${esc(r.doc.root)}**: ${warnings.map((w) => esc(w.message)).join("; ")}`);
-      lines.push("");
-    }
-  }
+  for (const r of f.results) lines.push(...documentSection(r));
 
   lines.push("<details><summary>How this was built</summary>", "");
   lines.push(`- TeX Live ${f.release || "?"}: ${f.provisionedFrom}; ${f.packageCount} packages installed.`);
