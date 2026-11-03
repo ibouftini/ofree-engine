@@ -336,7 +336,16 @@ export class TexLive {
    * Japanese fonts (kanjix.map) only once updmap has run.
    */
   async ensureFormats(engines: Iterable<Engine>): Promise<void> {
+    const wanted = new Set(engines);
     return this.mutex.lock(async () => {
+      // A cached tree may predate its maps (or come from a version that did not
+      // run updmap): check the map entry of the Japanese engines' base font.
+      const kanjix = join(this.texdir, "texmf-var", "fonts", "map", "dvipdfmx", "updmap", "kanjix.map");
+      const map = existsSync(kanjix) ? readFileSync(kanjix, "utf8") : "";
+      for (const engine of wanted) {
+        const base = engine === "platex" ? "rml" : engine === "uplatex" ? "uprml-h" : undefined;
+        if (base && !new RegExp(`^${base}\\s`, "m").test(map)) this.mapsDirty = true;
+      }
       if (this.mapsDirty) {
         const r = await run(join(this.bin, "updmap-sys"), [], { env: this.env() });
         if (r.code !== 0) this.log(`updmap-sys failed:\n${tail(r.output, 15)}`);
@@ -344,7 +353,7 @@ export class TexLive {
         this.changed = true;
       }
       const web2c = join(this.texdir, "texmf-var", "web2c");
-      for (const engine of new Set(engines)) {
+      for (const engine of wanted) {
         const exists = existsSync(web2c) && readdirSync(web2c).some((d) => existsSync(join(web2c, d, `${engine}.fmt`)));
         if (exists && !this.formatsDirty) continue;
         const r = await run(join(this.bin, "fmtutil-sys"), ["--byfmt", engine], { env: this.env() });
