@@ -79,6 +79,16 @@ export function fontPackage(db: Tlpdb, fileIndex: Map<string, string>, font: str
   return best?.[1];
 }
 
+/** Packages for a babel/polyglossia language: its definition file and its hyphenation patterns. */
+export function languagePackages(db: Tlpdb, fileIndex: Map<string, string>, lang: string): string[] {
+  const out: string[] = [];
+  const ldf = fileIndex.get(`${lang}.ldf`) ?? fileIndex.get(`gloss-${lang}.ldf`);
+  if (ldf) out.push(ldf);
+  const alias = HYPHEN_ALIASES[lang] ?? lang;
+  if (alias && db.packages.has(`hyphen-${alias}`)) out.push(`hyphen-${alias}`);
+  return out;
+}
+
 export interface Resolution {
   /** Every package to install (closure over `depend`). */
   packages: Set<string>;
@@ -118,10 +128,7 @@ export function resolvePackages(
     }
 
     for (const [lang, ref] of d.languages) {
-      const ldf = fileIndex.get(`${lang}.ldf`) ?? fileIndex.get(`gloss-${lang}.ldf`);
-      if (ldf) want(ldf, `language ${lang} (${at(ref)})`);
-      const alias = HYPHEN_ALIASES[lang] ?? lang;
-      if (alias && db.packages.has(`hyphen-${alias}`)) want(`hyphen-${alias}`, `hyphenation for ${lang} (${at(ref)})`);
+      for (const pkg of languagePackages(db, fileIndex, lang)) want(pkg, `language ${lang} (${at(ref)})`);
     }
 
     for (const [font, ref] of d.fonts) {

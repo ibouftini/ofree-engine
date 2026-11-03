@@ -12,6 +12,7 @@ export interface Problem {
 export type Missing =
   | { kind: "file"; name: string }
   | { kind: "font"; name: string }
+  | { kind: "language"; name: string }
   | { kind: "program"; name: string };
 
 export interface LogFindings {
@@ -40,7 +41,10 @@ export function parseLog(raw: string): LogFindings {
   for (const m of output.matchAll(/language definition file\s+(\S+?\.ldf)\s+was\s+not\s+found/g)) missing.push({ kind: "file", name: m[1] });
 
   for (const m of output.matchAll(/LaTeX Error: File [`'‘]([^'’]+)['’] not found/g)) missing.push({ kind: "file", name: m[1] });
-  for (const m of output.matchAll(/! I can't find file [`'‘]([^'’]+)['’]/g)) missing.push({ kind: "file", name: m[1] });
+  // "! I can't find file `x'." or, with -file-line-error, "chemfig.tex:89: I can't find file `x'."
+  for (const m of output.matchAll(/I can't find file [`'‘]([^'’]+)['’]/g)) missing.push({ kind: "file", name: m[1] });
+  // Current babel: "Package babel Error: Unknown option 'russian'. Suggested actions: ..."
+  for (const m of output.matchAll(/Package babel Error: Unknown option [`'‘]([A-Za-z]+)['’]/g)) missing.push({ kind: "language", name: m[1].toLowerCase() });
   for (const m of output.matchAll(/I couldn't open style file (\S+\.bst)/g)) missing.push({ kind: "file", name: m[1] });
   // Packages that check for their dependencies themselves (isodate: "Package file substr.sty not found").
   for (const m of output.matchAll(/Package file (\S+\.(?:sty|cls|tex|def|cfg)) not found/g)) missing.push({ kind: "file", name: m[1] });

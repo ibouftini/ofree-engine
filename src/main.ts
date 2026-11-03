@@ -9,7 +9,7 @@ import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
 import { compileAll, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
-import { fingerprint, fontPackage, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
+import { fingerprint, fontPackage, languagePackages, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { annotate, summaryMarkdown } from "./report.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
@@ -181,7 +181,9 @@ async function main() {
     const { db, index } = await tl.database();
     resolution = resolvePackages(db, index, arch, docs, extraPackages);
     const installed = await tl.install(resolution.packages);
-    await completeDependencies(tl, arch, installed);
+    // Read the files of every package the documents use, not only new ones:
+    // a restored installation may predate their dependencies.
+    await completeDependencies(tl, arch, [...installed, ...resolution.reasons.keys()]);
     provisionedFrom = restored.key
       ? "restored from the cache, then completed"
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
@@ -206,11 +208,19 @@ async function main() {
 
   // 4. Compile, recovering from what the engine can fix itself.
   t = performance.now();
+  let direct = resolution ? [...resolution.reasons.keys()] : undefined;
   const recovery = {
     installMissing: async (missing: Missing[]) => {
       const { db, index } = await tl.database();
+      direct ??= [...resolvePackages(db, index, arch, docs, extraPackages).reasons.keys()];
       const roots = new Set<string>();
       for (const m of missing) {
+        if (m.kind === "language") {
+          const pkgs = languagePackages(db, index, m.name).filter((p) => !tl.installedPackages().has(p));
+          core.info(`Missing language ${m.name}: ${pkgs.join(", ") || "nothing to install"}`);
+          for (const p of pkgs) roots.add(p);
+          continue;
+        }
         const candidates = m.kind === "file" ? [m.name, `${m.name}.sty`, `${m.name}.tex`, `${m.name}.cls`] : [m.name];
         const pkg = m.kind === "font" ? fontPackage(db, index, m.name) : candidates.map((c) => index.get(c)).find(Boolean);
         const state = !pkg ? "no TeX Live package provides it" : tl.installedPackages().has(pkg) ? `${pkg}, already installed` : pkg;
@@ -225,7 +235,7 @@ async function main() {
       }
       if (roots.size === 0) return [];
       const installed = await tl.install(closure(db, arch, roots));
-      installed.push(...(await completeDependencies(tl, arch, installed)));
+      installed.push(...(await completeDependencies(tl, arch, [...installed, ...direct])));
       await tl.ensureFormats(docs.map((d) => d.engine));
       return installed;
     },
