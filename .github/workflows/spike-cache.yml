@@ -71,7 +71,7 @@ jobs:
       - name: A document that asks for a newer LaTeX, with an error
         run: |
           mkdir -p /tmp/upd && cd /tmp/upd
-          printf '%s\n' '\NeedsTeXFormat{LaTeX2e}[2099-01-01]' '\documentclass{article}' '\usepackage{booktabs}' '\begin{document}' '\undefinedcommand' '\end{document}' > main.tex
+          printf '%s\n' '\NeedsTeXFormat{LaTeX2e}[2099-01-01]' '\documentclass{article}' '\usepackage{booktabs}' '\begin{document}' 'Some text.' '\undefinedcommand' '\end{document}' > main.tex
           cp -r /tmp/upd "$GITHUB_WORKSPACE/upd"
       - uses: ./
         with:
