@@ -187,6 +187,31 @@ function fontShapeWarning(w: string): string {
 const WARNING_NOISE =
   /Label\(s\) may have changed|There were undefined references|There were undefined citations|Please \(?re\)?run|Rerun to get|has changed\.|float specifier changed|Size substitutions|Some font shapes were not available|The following entry could not be found|Citation [`'‘]|Reference [`'‘]|File [`'‘].*not found|Empty bibliography|Unused global option/;
 
+const TEX_RULES = /^(?:latex|pdflatex|lualatex|xelatex|platex|uplatex)$/;
+
+/**
+ * Failures of the programs around TeX, which its .log does not show: dvipdfmx
+ * stopping on a font without a map entry, or a rule latexmk reports as failed
+ * (BibTeX, makeindex, ...). Read from latexmk's output.
+ */
+export function toolErrors(output: string, texErrors: number): Issue[] {
+  const out: Issue[] = [];
+  for (const m of output.matchAll(/^(x?dvipdfmx):fatal: (.+)$/gm)) {
+    const before = output.slice(0, m.index);
+    const font = [...before.matchAll(/Could not locate a virtual\/physical font for TFM "([^"]+)"/g)].pop()?.[1];
+    const issue: Issue = { message: m[2].trim(), source: m[1], lines: [], culprit: font };
+    issue.hint = hintFor(issue, () => []);
+    if (!out.some((o) => o.message === issue.message && o.culprit === issue.culprit)) out.push(issue);
+  }
+  if (out.length === 0 && texErrors === 0) {
+    for (const m of output.matchAll(/^\s*(\w+)(?: [^:\n]*)?: Command for '([^']+)' gave return code (\d+)/gm)) {
+      if (TEX_RULES.test(m[1])) continue;
+      if (!out.some((o) => o.source === m[1])) out.push({ message: `${m[2]} failed (exit code ${m[3]})`, source: m[1], lines: [], hint: "See this program's messages in the log of this step." });
+    }
+  }
+  return out;
+}
+
 /**
  * Reads the final .log (and .blg) of a document. `log` and `blg` are read as
  * latin1, as TeX writes bytes; `workspaceFile` maps a file name in the log to

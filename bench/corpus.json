@@ -467,21 +467,21 @@
   "group": "japanese"
  },
  {
-  "id": "kmc-shinkan2020",
-  "repo": "kmc-jp/shinkan2020",
-  "sha": "2355d7fa1a2e923eee23d93c95aec575a85c1f3a",
-  "with": {
-   "root_file": "main.tex"
-  },
-  "group": "japanese"
- },
- {
   "id": "bando-weekly-report",
   "repo": "b-sigpro/weekly-report",
   "sha": "e0ce21acbdb4a496fd471f8791420a44203af46e",
   "with": {
    "working_directory": "template",
    "root_file": "report.tex"
+  },
+  "group": "japanese"
+ },
+ {
+  "id": "rirekisho-lualatexja",
+  "repo": "jeandeaual/rirekisho",
+  "sha": "96ccd2cd4b7da6624fbe9a2e0f509bfb829b1ce1",
+  "with": {
+   "root_file": "rirekisho.tex"
   },
   "group": "japanese"
  }

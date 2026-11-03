@@ -93,6 +93,11 @@ const RULES: Rule[] = [
       ? `TeX Live now names this font **"${RENAMED_FONTS[m[1].toLowerCase()]}"**: use that name in the document.`
       : `The font "${m[1]}" is not in TeX Live or the repository. Add its files to the repository, or use a font that TeX Live has.`],
   [/I was expecting a [`'‘],' or a [`'‘]\}'/, () => "A field in this .bib entry does not end with a comma."],
+  [/Cannot proceed without \.vf or "physical" font/, (_m, i) =>
+    // pTeX and upTeX font names: rml, gbm, upjisr-h, nmlminr-h, hminr-h, ...
+    i.culprit && /^(up)?(rml|gbm|jis|nml|hmin|hgoth|min|goth)/.test(i.culprit)
+      ? `dvipdfmx has no font for the Japanese font \`${i.culprit}\`: the Japanese font maps are not set up (updmap with ptex-fontmaps and HaranoAji).`
+      : `dvipdfmx has no font for \`${i.culprit ?? "a font"}\`: no installed map file names it.`],
   [/I didn't find a database entry/, () => "The citation key is not in any of the .bib files."],
 ];
 

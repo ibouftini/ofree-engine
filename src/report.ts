@@ -136,7 +136,7 @@ export function summaryMarkdown(f: RunFacts): string {
   lines.push("");
   const substituted = (f.fonts ?? []).filter((x) => x.source === "substitute");
   for (const x of substituted) {
-    lines.push(`> [!WARNING]`, `> **${esc(x.name)}** cannot be downloaded, so **${esc(x.family ?? "")}** is used instead. It has the same character widths, so lines and pages break the same way, but the letters look slightly different. To use ${esc(x.name)} itself, add its font files to the repository.`, "");
+    lines.push(`> [!WARNING]`, `> **${esc(x.name)}** cannot be downloaded, so **${esc(x.family ?? "")}** is used instead. ${esc(x.note ?? "")} To use ${esc(x.name)} itself, add its font files to the repository.`, "");
   }
   for (const r of f.results) lines.push(...documentSection(r, f.prefix));
 

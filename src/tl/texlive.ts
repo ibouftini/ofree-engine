@@ -38,6 +38,7 @@ export class TexLive {
   private index?: Map<string, string>;
   private tlnet?: string;
   private formatsDirty = false;
+  private mapsDirty = false;
   private readonly mutex = new Mutex();
   private readonly repo: string;
 
@@ -309,6 +310,7 @@ export class TexLive {
     for (const n of names) this.installed.add(n);
     this.changed = true;
     if (names.some((n) => this.formatTriggers().has(n))) this.formatsDirty = true;
+    if (names.some((n) => this.db?.packages.get(n)?.executes.some((e) => /^add(Kanji|Mixed)?Map\b/.test(e)))) this.mapsDirty = true;
     this.saveManifest();
   }
 
@@ -328,9 +330,19 @@ export class TexLive {
     return (this.triggers = t);
   }
 
-  /** Builds the formats for `engines` if they are missing or packages changed. */
+  /**
+   * Builds the formats for `engines` if they are missing or packages changed,
+   * and the font maps if packages with maps were added: dvipdfmx finds
+   * Japanese fonts (kanjix.map) only once updmap has run.
+   */
   async ensureFormats(engines: Iterable<Engine>): Promise<void> {
     return this.mutex.lock(async () => {
+      if (this.mapsDirty) {
+        const r = await run(join(this.bin, "updmap-sys"), [], { env: this.env() });
+        if (r.code !== 0) this.log(`updmap-sys failed:\n${tail(r.output, 15)}`);
+        this.mapsDirty = false;
+        this.changed = true;
+      }
       const web2c = join(this.texdir, "texmf-var", "web2c");
       for (const engine of new Set(engines)) {
         const exists = existsSync(web2c) && readdirSync(web2c).some((d) => existsSync(join(web2c, d, `${engine}.fmt`)));

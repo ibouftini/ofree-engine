@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { diagnose, type SourceContext } from "../src/compile/diagnose.js";
+import { diagnose, toolErrors, type SourceContext } from "../src/compile/diagnose.js";
 
 const log = (name: string) => readFileSync(join(import.meta.dirname, "fixtures", "logs", name), "latin1");
 const summary = (d: ReturnType<typeof diagnose>) => d.errors.map((e) => `${e.file ?? "-"}:${e.lines.join(",")} ${e.message}${e.culprit ? ` [${e.culprit}]` : ""}`);
@@ -63,5 +63,24 @@ describe("diagnose", () => {
     expect(d.errors).toHaveLength(1);
     expect(d.errors[0]).toMatchObject({ file: "main.tex", lines: [4], message: "File ended while scanning use of \\textbf." });
     expect(d.errors[0].hint).toContain("a closing brace `}` is missing");
+  });
+
+  it("reports dvipdfmx stopping on a font without a map entry, which the .log does not show", () => {
+    // From a Japanese thesis built with upLaTeX before the kanji font maps were generated.
+    const output = [
+      'dvipdfmx:warning: Could not locate a virtual/physical font for TFM "upgbm-h".',
+      "dvipdfmx:warning: >> There are no valid font mapping entry for this font.",
+      'dvipdfmx:fatal: Cannot proceed without .vf or "physical" font for PDF output...',
+      "No output PDF file written.",
+      "Collected error summary (may duplicate other messages):",
+      "  dvipdf: Command for 'dvipdf' gave return code 256",
+    ].join("\n");
+    const [e, ...rest] = toolErrors(output, 0);
+    expect(rest).toEqual([]);
+    expect(e).toMatchObject({ source: "dvipdfmx", culprit: "upgbm-h", message: 'Cannot proceed without .vf or "physical" font for PDF output...' });
+    expect(e.hint).toContain("Japanese font maps");
+    // Another failed rule, with no TeX error to explain it.
+    expect(toolErrors("  makeindex main: Command for 'makeindex main' gave return code 1", 0)[0]).toMatchObject({ source: "makeindex", message: "makeindex main failed (exit code 1)" });
+    expect(toolErrors("  makeindex main: Command for 'makeindex main' gave return code 1", 2)).toEqual([]);
   });
 });

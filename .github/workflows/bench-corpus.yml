@@ -1867,39 +1867,6 @@ jobs:
         with:
           root_file: "main.tex"
 
-  incumbent-kmc-shinkan2020:
-    name: incumbent · kmc-shinkan2020
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kmc-shinkan2020,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: kmc-jp/shinkan2020
-          ref: 2355d7fa1a2e923eee23d93c95aec575a85c1f3a
-          submodules: recursive
-      - uses: xu-cheng/latex-action@v4
-        with:
-          root_file: "main.tex"
-
-  ours-kmc-shinkan2020:
-    name: ours · kmc-shinkan2020
-    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kmc-shinkan2020,') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: kmc-jp/shinkan2020
-          ref: 2355d7fa1a2e923eee23d93c95aec575a85c1f3a
-          submodules: recursive
-      - uses: actions/checkout@v5
-        with:
-          path: .ofree-engine
-      - uses: ./.ofree-engine
-        with:
-          root_file: "main.tex"
-
   incumbent-bando-weekly-report:
     name: incumbent · bando-weekly-report
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bando-weekly-report,') }}
@@ -1935,8 +1902,41 @@ jobs:
           working_directory: "template"
           root_file: "report.tex"
 
+  incumbent-rirekisho-lualatexja:
+    name: incumbent · rirekisho-lualatexja
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',rirekisho-lualatexja,') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: jeandeaual/rirekisho
+          ref: 96ccd2cd4b7da6624fbe9a2e0f509bfb829b1ce1
+          submodules: recursive
+      - uses: xu-cheng/latex-action@v4
+        with:
+          root_file: "rirekisho.tex"
+
+  ours-rirekisho-lualatexja:
+    name: ours · rirekisho-lualatexja
+    if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',rirekisho-lualatexja,') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: jeandeaual/rirekisho
+          ref: 96ccd2cd4b7da6624fbe9a2e0f509bfb829b1ce1
+          submodules: recursive
+      - uses: actions/checkout@v5
+        with:
+          path: .ofree-engine
+      - uses: ./.ofree-engine
+        with:
+          root_file: "rirekisho.tex"
+
   results:
-    needs: [incumbent-assumptionsofphysics-book, ours-assumptionsofphysics-book, incumbent-blockstreamresearch-zk-book, ours-blockstreamresearch-zk-book, incumbent-cvxgrp-cvxcla, ours-cvxgrp-cvxcla, incumbent-dcroote-stanford-thesis-example, ours-dcroote-stanford-thesis-example, incumbent-fhdwpb-latex-thesis-template, ours-fhdwpb-latex-thesis-template, incumbent-gboeing-cv, ours-gboeing-cv, incumbent-harvard-edge-cs249r-book, ours-harvard-edge-cs249r-book, incumbent-iydon-sustechthesis, ours-iydon-sustechthesis, incumbent-nag-devops-speed-hpc, ours-nag-devops-speed-hpc, incumbent-openhutb-neuro, ours-openhutb-neuro, incumbent-ruiguoz-nwpu-beamer, ours-ruiguoz-nwpu-beamer, incumbent-spacelab-ufsc-obdh2, ours-spacelab-ufsc-obdh2, incumbent-spamegg1-epp-discrete-math-5th-solutions, ours-spamegg1-epp-discrete-math-5th-solutions, incumbent-spamegg1-epp-discrete-math-5th-solutions-2, ours-spamegg1-epp-discrete-math-5th-solutions-2, incumbent-ucl-tdms, ours-ucl-tdms, incumbent-varaprasad6700-resume, ours-varaprasad6700-resume, incumbent-ac-pate-latex-resume, ours-ac-pate-latex-resume, incumbent-adolbyb-icom-706-mkiig, ours-adolbyb-icom-706-mkiig, incumbent-ahmed-alhindawi-latex-template, ours-ahmed-alhindawi-latex-template, incumbent-anastasia-labs-midgard, ours-anastasia-labs-midgard, incumbent-andstor-tex-paper-template, ours-andstor-tex-paper-template, incumbent-bagaswizard-buku-ta, ours-bagaswizard-buku-ta, incumbent-bipplane-resume-latex, ours-bipplane-resume-latex, incumbent-cao-wuhui-szu-latex-master-template, ours-cao-wuhui-szu-latex-master-template, incumbent-capitan-parrot-salary-estimator, ours-capitan-parrot-salary-estimator, incumbent-cengkooo-proposal-imul-123140205, ours-cengkooo-proposal-imul-123140205, incumbent-ctex-org-lshort-zh-cn, ours-ctex-org-lshort-zh-cn, incumbent-david-alvarez-rosa-curriculum-vitae, ours-david-alvarez-rosa-curriculum-vitae, incumbent-diebrate-diebrate-github-io, ours-diebrate-diebrate-github-io, incumbent-digama0-conzf, ours-digama0-conzf, incumbent-digo-certify-digo-certify-app, ours-digo-certify-digo-certify-app, incumbent-dknaack-master-thesis, ours-dknaack-master-thesis, incumbent-dr-richard-barker-osdr-x-species-v2, ours-dr-richard-barker-osdr-x-species-v2, incumbent-eagleoutice-eagle-maps, ours-eagleoutice-eagle-maps, incumbent-erik-donath-mutau-rv32-soc, ours-erik-donath-mutau-rv32-soc, incumbent-fascetta-tool-lora-skill-ir, ours-fascetta-tool-lora-skill-ir, incumbent-feathbow-tju-rl-template, ours-feathbow-tju-rl-template, incumbent-firefly-cpp-cover-letter-latex, ours-firefly-cpp-cover-letter-latex, incumbent-fmuro-alg1, ours-fmuro-alg1, incumbent-franzmohr-fincommons, ours-franzmohr-fincommons, incumbent-garebear99-freeeq8, ours-garebear99-freeeq8, incumbent-ghdaru-tesedaru, ours-ghdaru-tesedaru, incumbent-kuisthesis-kyoto, ours-kuisthesis-kyoto, incumbent-prg-thesis-titech, ours-prg-thesis-titech, incumbent-cpslab-thesis, ours-cpslab-thesis, incumbent-coins-article-tsukuba, ours-coins-article-tsukuba, incumbent-matsumoto-thesis, ours-matsumoto-thesis, incumbent-kut-platex, ours-kut-platex, incumbent-kut-lualatex, ours-kut-lualatex, incumbent-being24-template-ja, ours-being24-template-ja, incumbent-kmc-shinkan2020, ours-kmc-shinkan2020, incumbent-bando-weekly-report, ours-bando-weekly-report]
+    needs: [incumbent-assumptionsofphysics-book, ours-assumptionsofphysics-book, incumbent-blockstreamresearch-zk-book, ours-blockstreamresearch-zk-book, incumbent-cvxgrp-cvxcla, ours-cvxgrp-cvxcla, incumbent-dcroote-stanford-thesis-example, ours-dcroote-stanford-thesis-example, incumbent-fhdwpb-latex-thesis-template, ours-fhdwpb-latex-thesis-template, incumbent-gboeing-cv, ours-gboeing-cv, incumbent-harvard-edge-cs249r-book, ours-harvard-edge-cs249r-book, incumbent-iydon-sustechthesis, ours-iydon-sustechthesis, incumbent-nag-devops-speed-hpc, ours-nag-devops-speed-hpc, incumbent-openhutb-neuro, ours-openhutb-neuro, incumbent-ruiguoz-nwpu-beamer, ours-ruiguoz-nwpu-beamer, incumbent-spacelab-ufsc-obdh2, ours-spacelab-ufsc-obdh2, incumbent-spamegg1-epp-discrete-math-5th-solutions, ours-spamegg1-epp-discrete-math-5th-solutions, incumbent-spamegg1-epp-discrete-math-5th-solutions-2, ours-spamegg1-epp-discrete-math-5th-solutions-2, incumbent-ucl-tdms, ours-ucl-tdms, incumbent-varaprasad6700-resume, ours-varaprasad6700-resume, incumbent-ac-pate-latex-resume, ours-ac-pate-latex-resume, incumbent-adolbyb-icom-706-mkiig, ours-adolbyb-icom-706-mkiig, incumbent-ahmed-alhindawi-latex-template, ours-ahmed-alhindawi-latex-template, incumbent-anastasia-labs-midgard, ours-anastasia-labs-midgard, incumbent-andstor-tex-paper-template, ours-andstor-tex-paper-template, incumbent-bagaswizard-buku-ta, ours-bagaswizard-buku-ta, incumbent-bipplane-resume-latex, ours-bipplane-resume-latex, incumbent-cao-wuhui-szu-latex-master-template, ours-cao-wuhui-szu-latex-master-template, incumbent-capitan-parrot-salary-estimator, ours-capitan-parrot-salary-estimator, incumbent-cengkooo-proposal-imul-123140205, ours-cengkooo-proposal-imul-123140205, incumbent-ctex-org-lshort-zh-cn, ours-ctex-org-lshort-zh-cn, incumbent-david-alvarez-rosa-curriculum-vitae, ours-david-alvarez-rosa-curriculum-vitae, incumbent-diebrate-diebrate-github-io, ours-diebrate-diebrate-github-io, incumbent-digama0-conzf, ours-digama0-conzf, incumbent-digo-certify-digo-certify-app, ours-digo-certify-digo-certify-app, incumbent-dknaack-master-thesis, ours-dknaack-master-thesis, incumbent-dr-richard-barker-osdr-x-species-v2, ours-dr-richard-barker-osdr-x-species-v2, incumbent-eagleoutice-eagle-maps, ours-eagleoutice-eagle-maps, incumbent-erik-donath-mutau-rv32-soc, ours-erik-donath-mutau-rv32-soc, incumbent-fascetta-tool-lora-skill-ir, ours-fascetta-tool-lora-skill-ir, incumbent-feathbow-tju-rl-template, ours-feathbow-tju-rl-template, incumbent-firefly-cpp-cover-letter-latex, ours-firefly-cpp-cover-letter-latex, incumbent-fmuro-alg1, ours-fmuro-alg1, incumbent-franzmohr-fincommons, ours-franzmohr-fincommons, incumbent-garebear99-freeeq8, ours-garebear99-freeeq8, incumbent-ghdaru-tesedaru, ours-ghdaru-tesedaru, incumbent-kuisthesis-kyoto, ours-kuisthesis-kyoto, incumbent-prg-thesis-titech, ours-prg-thesis-titech, incumbent-cpslab-thesis, ours-cpslab-thesis, incumbent-coins-article-tsukuba, ours-coins-article-tsukuba, incumbent-matsumoto-thesis, ours-matsumoto-thesis, incumbent-kut-platex, ours-kut-platex, incumbent-kut-lualatex, ours-kut-lualatex, incumbent-being24-template-ja, ours-being24-template-ja, incumbent-bando-weekly-report, ours-bando-weekly-report, incumbent-rirekisho-lualatexja, ours-rirekisho-lualatexja]
     if: always()
     runs-on: ubuntu-latest
     steps:

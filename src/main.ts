@@ -218,7 +218,7 @@ async function main() {
   const named = [...new Set(docs.flatMap((d) => [...d.fonts.keys()]))].filter(providable);
   const fontOutcomes: FontOutcome[] = await fonts.provide(named, microsoftFonts);
   for (const f of fontOutcomes.filter((f) => f.source === "substitute")) {
-    core.warning(`"${f.name}" cannot be downloaded, so ${f.family} is used instead: it has the same character widths, so lines and pages break the same way, but the letters look slightly different. To use ${f.name} itself, add its font files to the repository.`, { title: `Font ${f.name} replaced by ${f.family}` });
+    core.warning(`"${f.name}" cannot be downloaded, so ${f.family} is used instead. ${f.note ?? ""} To use ${f.name} itself, add its font files to the repository.`, { title: `Font ${f.name} replaced by ${f.family}` });
   }
   if (fonts.changed) tl.changed = true;
   core.info(`Formats and fonts ready in ${seconds(s)} s`);

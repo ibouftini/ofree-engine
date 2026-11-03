@@ -8,7 +8,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { DocumentPlan, Engine } from "../plan/scan.js";
 import { pool, run, seconds } from "../util/exec.js";
-import { diagnose, type Diagnosis, type SourceContext } from "./diagnose.js";
+import { diagnose, toolErrors, type Diagnosis, type SourceContext } from "./diagnose.js";
 import { parseLog, type LogFindings, type Missing } from "./logparse.js";
 
 export interface CompileOptions {
@@ -163,7 +163,8 @@ async function attempt(
   // A PDF counts only if this attempt wrote it: repositories often commit an old one.
   const upToDate = r.code === 0 && /All targets .* are up-to-date/.test(r.output);
   const fresh = (p: string) => existsSync(p) && (upToDate || statSync(p).mtimeMs >= started - 2000);
-  const pdfAbs = [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find(fresh);
+  // dvipdfmx may leave a partial PDF behind when it stops.
+  const pdfAbs = /^x?dvipdfmx:fatal:/m.test(r.output) ? undefined : [...fromLog.reverse(), ...dirs.map((d) => join(d, job + ".pdf"))].find(fresh);
   return { code: r.code, output, runOutput: r.output, log: files[".log"], blg: files[".blg"], pdf: pdfAbs ? relative(workspace, pdfAbs) : null };
 }
 
@@ -281,6 +282,7 @@ export async function compileDocument(
     return abs.startsWith(workspace + sep) ? relative(cwdAbs, abs) : undefined;
   };
   const diagnosis = diagnose(last.log ?? last.runOutput, last.blg ?? "", context, inProject);
+  diagnosis.errors.push(...toolErrors(last.runOutput, diagnosis.errors.length));
   const status = last.pdf && last.code === 0 ? "ok" : last.pdf && keepGoing ? "errors" : "failed";
   if (status === "errors") notes.push("Built through LaTeX errors, as Overleaf does");
 

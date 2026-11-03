@@ -20,7 +20,20 @@ export interface FontOutcome {
   source: "repository" | "google" | "microsoft" | "substitute" | "missing";
   /** For a substitute: the font used instead. */
   family?: string;
+  /** For a substitute: how it differs from the original. */
+  note?: string;
 }
+
+const METRIC_NOTE = "It has the same character widths, so lines and pages break the same way, but the letters look slightly different.";
+
+/** Fonts TeX Live does not have, with a TeX Live font of the same design. */
+const TEXLIVE_SUBSTITUTES: Record<string, { family: string; file: string }> = {
+  ipamincho: { family: "IPAex Mincho", file: "ipaexm.ttf" },
+  ipapmincho: { family: "IPAex Mincho", file: "ipaexm.ttf" },
+  ipagothic: { family: "IPAex Gothic", file: "ipaexg.ttf" },
+  ipapgothic: { family: "IPAex Gothic", file: "ipaexg.ttf" },
+};
+const IPA_NOTE = "IPAex has the same Japanese characters as the IPA fonts; only Latin letters are spaced proportionally.";
 
 /** Microsoft's core fonts for the web: installer name and the SHA-256 that Ubuntu's ttf-mscorefonts-installer checks. */
 const MICROSOFT: Record<string, [string, string]> = {
@@ -183,6 +196,12 @@ export class Fonts {
         return undefined;
       }
     };
+    const tl = TEXLIVE_SUBSTITUTES[key.replace(/\s+/g, "")];
+    if (tl && (await run("kpsewhich", [tl.file], { env: this.env() })).code === 0) {
+      this.alias(name, { Regular: tl.file });
+      this.log(`Font "${name}": not in TeX Live, using ${tl.family}`);
+      return { name, source: "substitute", family: tl.family, note: IPA_NOTE };
+    }
     const family = googleFamily(name);
     const files = await attempt("Google Fonts", () => this.google(family));
     if (files) {
@@ -200,7 +219,7 @@ export class Fonts {
     if (substitute && subFiles) {
       this.alias(name, subFiles);
       this.log(`Font "${name}": using the metric-compatible ${substitute}`);
-      return { name, source: "substitute", family: substitute };
+      return { name, source: "substitute", family: substitute, note: METRIC_NOTE };
     }
     this.log(`Font "${name}": not in TeX Live, the repository, Google Fonts or Microsoft's core fonts`);
     return { name, source: "missing" };
