@@ -39,4 +39,4 @@ jobs:
             echo "--- largest files"
             find . -type f -printf '%s %p\n' | sort -rn | head -20 | numfmt --to=iec --field=1
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
