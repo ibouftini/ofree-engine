@@ -1,0 +1,44 @@
+name: Spike · runners
+
+# The action on runners other than x86 Ubuntu 24.04: ARM, macOS, the next
+# Ubuntu (ubuntu-latest moves to it), and a container job without sudo.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [edge-cases]
+    paths: [".github/workflows/spike-runners.yml"]
+
+jobs:
+  runner:
+    name: ${{ matrix.os }} · ${{ matrix.doc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm, macos-latest, ubuntu-26.04]
+        doc: [paper, arabic, lua]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/${{ matrix.doc }}
+          cache: false
+          artifact_name: pdf-${{ matrix.os }}-${{ matrix.doc }}
+
+  container:
+    name: container (no sudo) · ${{ matrix.doc }}
+    runs-on: ubuntu-latest
+    container: ubuntu:24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        doc: [paper, arabic]
+    steps:
+      - run: apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates perl xz-utils wget fontconfig >/dev/null
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/${{ matrix.doc }}
+          cache: false
+          artifact_name: pdf-container-${{ matrix.doc }}
