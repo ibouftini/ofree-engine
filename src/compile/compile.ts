@@ -59,7 +59,7 @@ export interface DocumentResult {
 
 const ENGINE_FLAG: Record<Engine, string> = { pdflatex: "-pdf", xelatex: "-xelatex", lualatex: "-lualatex" };
 const ENGINE_NAME: Record<Engine, string> = { pdflatex: "pdfLaTeX", xelatex: "XeLaTeX", lualatex: "LuaLaTeX" };
-const MAX_ROUNDS = 5;
+const MAX_ROUNDS = 8;
 
 async function attempt(
   workspace: string,

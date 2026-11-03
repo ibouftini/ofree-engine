@@ -61,6 +61,12 @@ export class TexLive {
     return this.installed;
   }
 
+  /** Absolute paths of a package's installed run files with the given extensions. */
+  sourceFiles(pkg: string, extensions: RegExp): string[] {
+    const files = this.db?.packages.get(pkg)?.runfiles ?? [];
+    return files.filter((f) => extensions.test(f)).map((f) => join(this.texdir, f)).filter((f) => existsSync(f));
+  }
+
   env(): NodeJS.ProcessEnv {
     const env: NodeJS.ProcessEnv = {
       ...process.env,

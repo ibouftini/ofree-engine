@@ -30,9 +30,14 @@ const uniq = <T>(items: T[], key: (t: T) => string) => {
   return items.filter((t) => (seen.has(key(t)) ? false : (seen.add(key(t)), true)));
 };
 
-export function parseLog(output: string): LogFindings {
+export function parseLog(raw: string): LogFindings {
   const problems: Problem[] = [];
   const missing: Missing[] = [];
+  // Package messages wrap onto lines that start with "(package)"; join them.
+  const output = raw.replace(/\n\([A-Za-z0-9@.-]+\) {2,}/g, " ");
+
+  for (const m of output.matchAll(/Encoding file [`'‘]([^'’]+)['’] not found/g)) missing.push({ kind: "file", name: m[1] });
+  for (const m of output.matchAll(/language definition file\s+(\S+?\.ldf)\s+was\s+not\s+found/g)) missing.push({ kind: "file", name: m[1] });
 
   for (const m of output.matchAll(/LaTeX Error: File [`'‘]([^'’]+)['’] not found/g)) missing.push({ kind: "file", name: m[1] });
   for (const m of output.matchAll(/! I can't find file [`'‘]([^'’]+)['’]/g)) missing.push({ kind: "file", name: m[1] });
@@ -63,9 +68,19 @@ export function parseLog(output: string): LogFindings {
 
   const needsShellEscape = /-shell-escape|shell escape is disabled|--enable-write18|You must invoke LaTeX with/i.test(output);
 
-  // file:line:message lines from -file-line-error.
-  for (const m of output.matchAll(/^([^\s:][^:\n]*\.(?:tex|sty|cls|bib|ltx|def|cfg|bbx|cbx)):(\d+): (.+)$/gm)) {
-    problems.push({ severity: "error", file: m[1].replace(/^\.\//, ""), line: Number(m[2]), message: m[3].trim() });
+  // file:line:message lines from -file-line-error; TeX wraps long messages at
+  // 79 characters, so keep reading until the message ends.
+  const lines = output.split("\n");
+  const stop = /^\s*$|^(See the |Type {2}H|Type H|l\.\d|! |\.\/|\S+\.(?:tex|sty|cls):\d+:|\(|Enter file name)/;
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^([^\s:][^:\n]*\.(?:tex|sty|cls|bib|ltx|def|cfg|bbx|cbx)):(\d+): (.+)$/.exec(lines[i]);
+    if (!m) continue;
+    let message = m[3].trim();
+    for (let j = i + 1; j < Math.min(i + 4, lines.length) && !stop.test(lines[j]) && lines[i].length >= 78; j++) {
+      message += lines[j].trim();
+      if (lines[j].length < 79) break;
+    }
+    problems.push({ severity: "error", file: m[1].replace(/^\.\//, ""), line: Number(m[2]), message });
   }
   // Errors without a location.
   for (const m of output.matchAll(/^! (.+)$/gm)) {

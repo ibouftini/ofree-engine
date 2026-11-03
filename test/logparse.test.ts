@@ -38,6 +38,25 @@ describe("parseLog", () => {
     );
   });
 
+  it("reads wrapped babel and fontenc messages", () => {
+    const f = parseLog(
+      [
+        "./mthesis.cls:12: Package babel Error: Unknown option `russian'. Either you misspelled it",
+        "(babel)                or the language definition file russian.ldf was not found.",
+        "",
+        "./mthesis.cls:14: Package fontenc Error: Encoding file `t2aenc.def' not found.",
+        "(fontenc)                You might have misspelt the name of the encoding.",
+      ].join("\n"),
+    );
+    expect(f.missing).toEqual(
+      expect.arrayContaining([
+        { kind: "file", name: "russian.ldf" },
+        { kind: "file", name: "t2aenc.def" },
+      ]),
+    );
+    expect(f.problems[0].message).toContain("language definition file russian.ldf was not found");
+  });
+
   it("detects documents that need a Unicode engine", () => {
     expect(parseLog("! Fatal Package fontspec Error: The fontspec package requires either XeTeX or\n(fontspec) LuaTeX.").needsUnicodeEngine).toBe(
       "xelatex",

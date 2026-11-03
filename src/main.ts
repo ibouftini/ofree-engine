@@ -2,12 +2,13 @@
 
 import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
-import { copyFileSync, existsSync, globSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, globSync, mkdirSync, readFileSync } from "node:fs";
 import { cpus, homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
 import { compileAll, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
+import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { annotate, summaryMarkdown } from "./report.js";
@@ -103,6 +104,38 @@ async function shell(script: string, cwd: string, env: NodeJS.ProcessEnv, what: 
 }
 
 /**
+ * Installs what newly installed packages load themselves (read from their
+ * files on disk), repeating until nothing new is needed.
+ */
+async function completeDependencies(tl: TexLive, arch: string, seed: string[]): Promise<string[]> {
+  if (seed.length === 0) return [];
+  const { db, index } = await tl.database();
+  const basic = closure(db, arch, ["scheme-basic"]);
+  const scanned = new Set<string>(basic);
+  const added: string[] = [];
+  let frontier = seed;
+  for (let round = 0; round < 12 && frontier.length > 0; round++) {
+    const wanted = new Set<string>();
+    for (const name of frontier) {
+      if (scanned.has(name)) continue;
+      scanned.add(name);
+      for (const file of tl.sourceFiles(name, /\.(sty|cls|def|code\.tex)$/)) {
+        for (const req of filesLoadedBy(readFileSync(file, "latin1"))) {
+          const owner = index.get(req) ?? (req.startsWith("tikzlibrary") ? index.get(req.replace(/^tikzlibrary/, "pgflibrary")) : undefined);
+          if (owner && !tl.installedPackages().has(owner)) wanted.add(owner);
+        }
+      }
+    }
+    if (wanted.size === 0) break;
+    const installed = await tl.install(closure(db, arch, wanted));
+    added.push(...installed);
+    frontier = installed;
+  }
+  if (added.length) core.info(`Installed ${added.length} packages that installed packages load themselves: ${added.join(", ")}`);
+  return added;
+}
+
+/**
  * Fonts TeX Live generates with METAFONT on demand (Cyrillic LH fonts, for
  * example) have no file to install: install METAFONT and the font sources.
  */
@@ -147,7 +180,8 @@ async function main() {
   if (!provisionedFrom) {
     const { db, index } = await tl.database();
     resolution = resolvePackages(db, index, arch, docs, extraPackages);
-    await tl.install(resolution.packages);
+    const installed = await tl.install(resolution.packages);
+    await completeDependencies(tl, arch, installed);
     provisionedFrom = restored.key
       ? "restored from the cache, then completed"
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
@@ -191,6 +225,7 @@ async function main() {
       }
       if (roots.size === 0) return [];
       const installed = await tl.install(closure(db, arch, roots));
+      installed.push(...(await completeDependencies(tl, arch, installed)));
       await tl.ensureFormats(docs.map((d) => d.engine));
       return installed;
     },
