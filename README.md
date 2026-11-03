@@ -48,12 +48,15 @@ The most-used LaTeX action, `xu-cheng/latex-action`, downloads a 2.3 GiB TeX Liv
 
 | | xu-cheng/latex-action@v4 | This action |
 |---|---:|---:|
-| Repositories built | 41 / 47 | 41 / 47 (the same 41) |
+| Repositories built | 42 / 47 | 42 / 47 (the same 42) |
 | Build step, median | 74 s | 12 s |
 | Build step, mean | 102 s | 28 s |
 | Whole job, median | 98 s | 48 s |
 
-- **The six repositories neither action builds** need files that earlier steps of their own workflows generate.
+- **The five repositories neither action builds:**
+  - three fail in their own CI at the pinned commit;
+  - two need files that earlier steps of their own workflows generate (`sphinx-build`, `cabal haddock`), which the benchmark does not run.
+- **The timing figures** come from the full run, where 40 repositories were built by both actions.
 - **Timings come from a run where most repositories had a cached TeX Live from an earlier run,** as they would in daily use.
 - **The whole-job figures include `actions/checkout`,** which takes minutes for some large repositories.
 
