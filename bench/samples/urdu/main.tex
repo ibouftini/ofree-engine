@@ -1,0 +1,36 @@
+\documentclass[12pt]{article}
+% Urdu (right to left, Nastaliq script) with English and math, using
+% polyglossia and XeLaTeX as most Overleaf Urdu templates do. Awami Nastaliq
+% is the Nastaliq font TeX Live ships; it is rendered with Graphite.
+\usepackage{amsmath}
+\usepackage{polyglossia}
+\setdefaultlanguage{urdu}
+\setotherlanguage{english}
+\setmainfont{Libertinus Serif}
+\newfontfamily\urdufont[Script=Arabic,Renderer=Graphite,Scale=0.9]{Awami Nastaliq}
+\newfontfamily\urdufontsf[Script=Arabic,Scale=1.0]{Amiri}
+\begin{document}
+
+\section{تعارف}
+یہ ایک آزمائشی دستاویز ہے جو اردو کو \textenglish{English} کے ساتھ ملاتی ہے۔
+پاکستان کا دارالحکومت اسلام آباد ہے، اور سب سے بڑا شہر کراچی ہے۔
+
+\section{ریاضی}
+آئن سٹائن کی مساوات یہ ہے:
+\begin{equation}
+  E = mc^2
+\end{equation}
+اور سال ۲۰۲۶ میں ۴۲ مخزن آزمائے گئے۔
+
+\begin{english}
+\section{English paragraph}
+This paragraph is left to right inside a right-to-left document, with
+\texturdu{اردو} words inside it.
+\end{english}
+
+\begin{itemize}
+  \item پہلا نکتہ
+  \item دوسرا نکتہ: {\urdufontsf نسخ خط میں متن}
+\end{itemize}
+
+\end{document}

@@ -8,6 +8,10 @@ name: Benchmark · samples
 
 on:
   workflow_dispatch:
+    inputs:
+      docs:
+        description: Samples to build, as a JSON list (default - all)
+        default: ""
   push:
     branches: [main]
     paths: ["dist/**", "action.yml", "bench/**", ".github/workflows/bench.yml"]
@@ -23,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: [paper, arabic, lua, cv, book, beamer, glossary]
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry"]') }}
         cache: [true, false]
     steps:
       - uses: actions/checkout@v5
@@ -39,22 +43,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { doc: paper, xelatex: false, lualatex: false }
-          - { doc: arabic, xelatex: true, lualatex: false }
-          - { doc: lua, xelatex: false, lualatex: true }
-          - { doc: cv, xelatex: true, lualatex: false }
-          - { doc: book, xelatex: false, lualatex: false }
-          - { doc: beamer, xelatex: false, lualatex: false }
-          - { doc: glossary, xelatex: false, lualatex: false }
+        doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: xu-cheng/latex-action@v4
         with:
           root_file: main.tex
           working_directory: bench/samples/${{ matrix.doc }}
-          latexmk_use_xelatex: ${{ matrix.xelatex }}
-          latexmk_use_lualatex: ${{ matrix.lualatex }}
+          latexmk_use_xelatex: ${{ contains(fromJSON('["arabic","cv","chinese","urdu"]'), matrix.doc) }}
+          latexmk_use_lualatex: ${{ contains(fromJSON('["lua","bidi"]'), matrix.doc) }}
 
   results:
     needs: [ours, incumbent]

@@ -1,0 +1,51 @@
+\documentclass[11pt,twocolumn]{article}
+% Mixed directions with LuaLaTeX and babel's bidi support: Hebrew main text,
+% Arabic and Persian passages, English insertions, numbers, a table and footnotes.
+\usepackage[bidi=basic,layout=tabular.lists,english]{babel}
+\babelprovide[import,main]{hebrew}
+\babelprovide[import]{arabic}
+\babelprovide[import]{persian}
+\babelfont{rm}{Libertinus Serif}
+\babelfont[hebrew]{rm}{David CLM}
+\babelfont[hebrew]{sf}{Frank Ruehl CLM}
+\babelfont[arabic,persian]{rm}[Scale=1.1]{Amiri}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\begin{document}
+
+\section{מבוא}
+זהו מסמך ניסיון שמערבב עברית עם \foreignlanguage{english}{English text}
+ומספרים כמו 2026 ו־3.14.\footnote{הערת שוליים בעברית עם \foreignlanguage{english}{a few English words}.}
+המשוואה $a^2 + b^2 = c^2$ צריכה להופיע משמאל לימין.
+
+\section{ערבית ופרסית}
+\begin{otherlanguage}{arabic}
+هذه فقرة عربية داخل مستند عبري، فيها رقم ٤٢ وكلمة \foreignlanguage{english}{LaTeX}.
+\end{otherlanguage}
+
+\begin{otherlanguage}{persian}
+این یک پاراگراف فارسی است با عدد ۱۴۰۵.
+\end{otherlanguage}
+
+\begin{otherlanguage}{english}
+\section{English section}
+Left-to-right text with an embedded Hebrew word: \foreignlanguage{hebrew}{שלום},
+and Arabic: \foreignlanguage{arabic}{سلام}.
+\end{otherlanguage}
+
+\section{טבלה}
+\begin{tabular}{lrr}
+  \toprule
+  עיר & אוכלוסייה & שנה \\
+  \midrule
+  ירושלים & 971800 & 2022 \\
+  \foreignlanguage{arabic}{القاهرة} & 10100000 & 2022 \\
+  \bottomrule
+\end{tabular}
+
+\begin{itemize}
+  \item פריט ראשון
+  \item {\sffamily פריט שני בגופן אחר}
+\end{itemize}
+
+\end{document}

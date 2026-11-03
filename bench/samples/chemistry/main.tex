@@ -1,0 +1,51 @@
+\documentclass{article}
+% Chemistry: structural formulas (chemfig), equations (mhchem, chemformula),
+% units (siunitx), hazard statements and reaction schemes (chemmacros),
+% molecular orbital diagrams (modiagram), and a periodic-table style cell.
+\usepackage[version=4]{mhchem}
+\usepackage{chemfig}
+\usepackage{chemformula}
+\usepackage{chemmacros}
+\chemsetup{modules={reactions,redox,phases,isotopes,nomenclature}}
+\usepackage{siunitx}
+\usepackage{modiagram}
+\usepackage[margin=2cm]{geometry}
+
+\begin{document}
+\section{Equations}
+\ce{2H2 + O2 -> 2H2O}, \quad \ce{CO2 + C <=> 2CO}, \quad \ce{^{227}_{90}Th+},
+\quad \ce{SO4^2- + Ba^2+ -> BaSO4 v}, \quad \ce{Hg^2+ ->[I-] HgI2 ->[I-] [Hg^{II}I4]^2-}.
+
+With chemformula: \ch{Fe2O3 + 3 CO -> 2 Fe + 3 CO2}.
+A concentration of \SI{0.1}{\mole\per\litre} at \SI{298.15}{\kelvin}; $\Delta H = \SI{-285.8}{\kilo\joule\per\mole}$.
+
+\begin{reaction}
+  CH4 + 2 O2 -> CO2 + 2 H2O
+\end{reaction}
+
+Oxidation states: \ox{+2,Fe}, \ox{-2,O}; \iupac{2-chloro\-butane}; \pH{} and \pKa{}.
+
+\section{Structures}
+\chemfig{*6((-OH)=-=(-COOH)-=-)}
+\qquad
+\chemfig{H_3C-[:30]C(=[:90]O)-[:-30]O-[:30]CH_3}
+\qquad
+\chemfig{[:-30]*6(=-=(-[:30]N(-[:90]H)-[:-30]H)-=-)}
+
+\schemestart
+  \chemfig{C(-[2]H)(-[4]H)(-[6]H)-OH}
+  \arrow{->[\ce{H+}][\SI{100}{\celsius}]}
+  \chemfig{C(-[2]H)(-[4]H)=O}
+  \+ \ce{H2O}
+\schemestop
+
+\section{Molecular orbitals}
+\begin{MOdiagram}[labels]
+  \atom{left}{1s={;pair}}
+  \atom{right}{1s={;up}}
+  \molecule{1sMO={.75;pair}}
+\end{MOdiagram}
+
+\section{Names}
+\iupac{1,3-di\-chloro\-benzene} and \ch{C6H4Cl2}.
+\end{document}

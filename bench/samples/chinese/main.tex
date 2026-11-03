@@ -1,0 +1,59 @@
+\documentclass[UTF8,a4paper]{ctexart}
+% Chinese article in the style of the common Overleaf ctex templates:
+% ctex picks XeLaTeX and the Fandol fonts; English and math stay in Latin fonts.
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{中文排版测试：混合中英文与数学公式}
+\author{张三 \and 李四}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+本文测试中文排版的常见情况，包括标题、目录、中英文混排（Mixed Chinese and English）、
+数学公式、表格以及\textbf{粗体}与\emph{强调}。
+\end{abstract}
+
+\tableofcontents
+
+\section{引言}
+\LaTeX{} 是一种高质量的排版系统。在中文环境下，我们通常使用 \texttt{ctex} 宏集。
+标点符号如“引号”、《书名号》、（括号）以及省略号……都应正确处理。
+繁體中文也應該可以正常顯示，例如：臺灣、香港。
+
+\section{数学公式}
+欧拉公式 $e^{i\pi} + 1 = 0$ 被称为最美的公式。高斯积分如下：
+\begin{equation}
+  \int_{-\infty}^{\infty} e^{-x^2}\,\mathrm{d}x = \sqrt{\pi}. \label{eq:gauss}
+\end{equation}
+由式~\eqref{eq:gauss} 可知，标准正态分布的密度函数积分为 $1$。
+
+\section{表格}
+\begin{table}[h]
+  \centering
+  \caption{各城市人口（单位：万）}
+  \begin{tabular}{lrr}
+    \toprule
+    城市 & 2010 年 & 2020 年 \\
+    \midrule
+    北京 & 1961 & 2189 \\
+    上海 & 2302 & 2487 \\
+    广州 & 1270 & 1868 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{列表}
+\begin{enumerate}
+  \item 第一项：{\heiti 黑体}与{\kaishu 楷体}；
+  \item 第二项：{\fangsong 仿宋}；
+  \item 第三项：\textcolor{red}{红色文字}。
+\end{enumerate}
+
+\end{document}
