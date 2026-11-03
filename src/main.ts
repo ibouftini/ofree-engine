@@ -237,7 +237,7 @@ async function main() {
           continue;
         }
         // NFSS reports "LGRcmr.fd" but loads the lowercase file name.
-        const candidates = m.kind === "file" ? [m.name, m.name.toLowerCase(), `${m.name}.sty`, `${m.name}.tex`, `${m.name}.cls`] : [m.name];
+        const candidates = m.kind === "file" ? [m.name, m.name.toLowerCase(), `${m.name}.sty`, `${m.name}.tex`, `${m.name}.cls`, `${m.name}.tfm`] : [m.name];
         const pkg = m.kind === "font" ? fontPackage(db, index, m.name) : candidates.map((c) => index.get(c)).find(Boolean);
         const state = !pkg ? "no TeX Live package provides it" : tl.installedPackages().has(pkg) ? `${pkg}, already installed` : pkg;
         core.info(`Missing ${m.kind} ${m.name}: ${state}`);

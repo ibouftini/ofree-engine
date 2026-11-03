@@ -59,7 +59,7 @@ export function parseLog(raw: string): LogFindings {
     missing.push({ kind: "font", name: m[1] });
   for (const m of output.matchAll(/luaotfload \| \w+ : [^\n]*?Font "([^"]+)" not found/g)) missing.push({ kind: "font", name: m[1] });
   // "! Font \T1/cmr/m/n/10=ecrm1000 at 10pt not loadable" (older) or "! Font OML/zplm/m/it/8=zplmr7m ..." (newer).
-  for (const m of output.matchAll(/! Font \\?[^=\s]+=([^\s:]+?)(?: at [\d.]+pt| scaled \d+)? not loadable: Metric \(TFM\) file/g)) {
+  for (const m of output.matchAll(/Font \\?[^=\s]+=([^\s:]+?)(?: at [\d.]+pt| scaled \d+)? not loadable: Metric \(TFM\) file/g)) {
     missing.push({ kind: "file", name: m[1].replace(/\.tfm$/, "") + ".tfm" });
   }
   // "kpathsea: Running mktextfm X" means TeX is generating a font, not that it is missing.

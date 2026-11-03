@@ -62,6 +62,11 @@ describe("parseLog", () => {
     expect(f.missing).toEqual([{ kind: "file", name: "LGRcmr.fd" }]);
   });
 
+  it("reads font errors in -file-line-error form", () => {
+    const f = parseLog("./main.tex:3: Font T1/ptm/m/n/10=ptmr8t at 10.0pt not loadable: Metric (TFM) file not found.<to be read again>");
+    expect(f.missing).toEqual([{ kind: "file", name: "ptmr8t.tfm" }]);
+  });
+
   it("detects documents that need a Unicode engine", () => {
     expect(parseLog("! Fatal Package fontspec Error: The fontspec package requires either XeTeX or\n(fontspec) LuaTeX.").needsUnicodeEngine).toBe(
       "xelatex",
