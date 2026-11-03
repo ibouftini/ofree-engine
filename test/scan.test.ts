@@ -75,6 +75,9 @@ describe("planDocument", () => {
     expect(bidi.engineReason).toBe("babel bidi=basic (main.tex:4)");
     expect([...bidi.languages.keys()]).toEqual(["english"]);
     expect([...bidi.locales.keys()]).toEqual(["hebrew", "arabic", "persian"]);
+    // babel loads these itself for \babelfont and LuaTeX bidi.
+    expect([...bidi.requires.keys()]).toEqual(expect.arrayContaining(["fontspec.sty", "luatexbase.sty"]));
+    expect(bidi.requires.has("bidi.sty")).toBe(false);
 
     // provide+=* loads the non-main languages from .ini files; arabic is the main one.
     const d = planDocument(fx("babelini"), "main.tex");

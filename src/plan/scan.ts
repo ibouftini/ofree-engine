@@ -161,6 +161,9 @@ interface Accumulator {
   directive: { engine: Engine; ref: Ref } | null;
   /** Something only LuaTeX runs: Lua code, or a babel feature implemented in Lua. */
   luaFeature: { reason: string; ref: Ref } | null;
+  /** babel's bidi= option. */
+  babelBidi: { mode: string; ref: Ref } | null;
+  babelFont: Ref | null;
   biblatex: { backend: string; ref: Ref } | null;
   bibtex: Ref | null;
   shellEscape: (Ref & { reason: string }) | null;
@@ -297,9 +300,18 @@ function scanText(
     if (lua) acc.luaFeature = { reason: "Lua code", ref: ref(lua.index) };
   }
   // babel implements these only for LuaTeX; with XeTeX it stops with an error.
+  if (!acc.babelBidi) {
+    const b = /\bbidi\s*=\s*(default|basic-r|basic|bidi-r|bidi-l|bidi)\b/.exec(text);
+    if (b) acc.babelBidi = { mode: b[1], ref: ref(b.index) };
+    if (b && b[1].startsWith("basic") && !acc.luaFeature) acc.luaFeature = { reason: `babel bidi=${b[1]}`, ref: ref(b.index) };
+  }
   if (!acc.luaFeature) {
-    const b = /\bbidi\s*=\s*basic(?:-r)?\b|\\babel(?:pre|post)hyphenation\b/.exec(text);
-    if (b) acc.luaFeature = { reason: b[0].startsWith("\\") ? b[0] : `babel ${b[0].replace(/\s+/g, "")}`, ref: ref(b.index) };
+    const h = /\\babel(?:pre|post)hyphenation\b/.exec(text);
+    if (h) acc.luaFeature = { reason: h[0], ref: ref(h.index) };
+  }
+  if (!acc.babelFont) {
+    const f = /\\babelfont\b/.exec(text);
+    if (f) acc.babelFont = ref(f.index);
   }
   for (const m of text.matchAll(/\\bibliographystyle\s*\{([^}]+)\}/g)) {
     const style = m[1].trim();
@@ -407,6 +419,8 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     packages: new Map(),
     directive: null,
     luaFeature: null,
+    babelBidi: null,
+    babelFont: null,
     biblatex: null,
     bibtex: null,
     shellEscape: null,
@@ -452,6 +466,17 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     const [font, r] = [...acc.fonts][0];
     engine = "xelatex";
     engineReason = `font "${font}" (${fmt(r)})`;
+  }
+
+  // Packages babel loads itself, depending on the engine. babel is in
+  // scheme-basic, whose files are not scanned for what they load.
+  if (acc.babelFont && engine !== "pdflatex") addOnce(acc.requires, "fontspec.sty", acc.babelFont);
+  if (acc.babelBidi && acc.babelBidi.mode !== "default") {
+    if (engine === "lualatex") addOnce(acc.requires, "luatexbase.sty", acc.babelBidi.ref);
+    if (engine === "xelatex" && acc.babelBidi.mode.startsWith("bidi")) {
+      addOnce(acc.requires, "fontspec.sty", acc.babelBidi.ref);
+      addOnce(acc.requires, "bidi.sty", acc.babelBidi.ref);
+    }
   }
 
   // Languages from class options count only when babel is loaded.
