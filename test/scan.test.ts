@@ -58,6 +58,16 @@ describe("planDocument", () => {
     expect([...d.languages.keys()]).toEqual(["russian"]);
   });
 
+  it("maps Beamer themes and a multi-chapter book's tools", () => {
+    const samples = join(import.meta.dirname, "..", "bench", "samples");
+    const beamer = planDocument(join(samples, "beamer"), "main.tex");
+    expect([...beamer.requires.keys()]).toEqual(expect.arrayContaining(["beamer.cls", "beamerthememetropolis.sty", "tikz.sty"]));
+    const book = planDocument(join(samples, "book"), "main.tex");
+    expect(book.sources).toEqual(["main.tex", "chapters/introduction.tex", "chapters/methods.tex", "chapters/data.tex"]);
+    expect(book.bibTool).toBe("bibtex");
+    expect([...book.requires.keys()]).toEqual(expect.arrayContaining(["plainnat.bst", "makeidx.sty", "natbib.sty"]));
+  });
+
   it("scans a local class and drops it from the TeX Live requirements", () => {
     const d = planDocument(fx("localcls"), "cv.tex");
     expect(d.requires.has("mycv.cls")).toBe(false);

@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        doc: [paper, arabic, lua, cv]
+        doc: [paper, arabic, lua, cv, book, beamer, glossary]
         cache: [true, false]
     steps:
       - uses: actions/checkout@v5
@@ -44,6 +44,9 @@ jobs:
           - { doc: arabic, xelatex: true, lualatex: false }
           - { doc: lua, xelatex: false, lualatex: true }
           - { doc: cv, xelatex: true, lualatex: false }
+          - { doc: book, xelatex: false, lualatex: false }
+          - { doc: beamer, xelatex: false, lualatex: false }
+          - { doc: glossary, xelatex: false, lualatex: false }
     steps:
       - uses: actions/checkout@v5
       - uses: xu-cheng/latex-action@v4

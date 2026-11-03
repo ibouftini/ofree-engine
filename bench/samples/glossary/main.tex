@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage[acronym]{glossaries}
+\usepackage{nomencl}
+\usepackage{hyperref}
+\makeglossaries
+\makenomenclature
+
+\newglossaryentry{latex}{name={LaTeX}, description={a document preparation system}}
+\newacronym{ci}{CI}{continuous integration}
+
+\begin{document}
+We build \gls{latex} documents with \gls{ci}. Again: \gls{ci}.
+\nomenclature{$c$}{Speed of light in vacuum}
+\nomenclature{$E$}{Energy}
+
+\printglossaries
+\printnomenclature
+\end{document}

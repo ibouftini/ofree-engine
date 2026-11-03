@@ -21,6 +21,9 @@ export function filesLoadedBy(source: string): string[] {
   for (const m of text.matchAll(/\\(?:LoadClass|LoadClassWithOptions)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g)) {
     for (const n of splitNames(m[1])) out.add(`${n}.cls`);
   }
+  for (const m of text.matchAll(/\\use(color|font|inner|outer)?theme\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+    for (const n of splitNames(m[2])) out.add(`beamer${m[1] ?? ""}theme${n}.sty`);
+  }
   for (const m of text.matchAll(/\\usetikzlibrary\s*\{([^}]*)\}/g)) {
     for (const n of splitNames(m[1].replace(/\s+/g, ""))) out.add(`tikzlibrary${n}.code.tex`);
   }

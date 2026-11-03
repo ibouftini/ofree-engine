@@ -2,11 +2,11 @@
 
 import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
-import { copyFileSync, existsSync, globSync, mkdirSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, globSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
-import { compileAll, type CompileOptions } from "./compile/compile.js";
+import { compileAll, EXTRA_LATEXMKRC, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, languagePackages, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
@@ -34,7 +34,14 @@ function expand(workspace: string, patterns: string[]): string[] {
 }
 
 function plan(workspace: string): DocumentPlan[] {
-  const forced: Engine | undefined = bool("latexmk_use_xelatex") ? "xelatex" : bool("latexmk_use_lualatex") ? "lualatex" : undefined;
+  // An engine named in the inputs, either way xu-cheng/latex-action accepts it.
+  const args = core.getInput("args").split(/\s+/);
+  const forced: Engine | undefined =
+    bool("latexmk_use_xelatex") || args.some((a) => /^-(xelatex|pdfxe)$/.test(a))
+      ? "xelatex"
+      : bool("latexmk_use_lualatex") || args.some((a) => /^-(lualatex|pdflua)$/.test(a))
+        ? "lualatex"
+        : undefined;
   const given = expand(workspace, core.getMultilineInput("root_file").flatMap((l) => l.split(/\s*\n\s*/)).filter(Boolean));
   if (given.length > 0) {
     // Compatibility with xu-cheng/latex-action: compile from the working directory
@@ -264,6 +271,11 @@ async function main() {
     concurrency: Math.max(1, cpus().length),
     log: (m) => core.info(m),
   };
+  if (opts.compiler === "latexmk") {
+    opts.extraRc = join(work, "ofree.latexmkrc");
+    mkdirSync(work, { recursive: true });
+    writeFileSync(opts.extraRc, EXTRA_LATEXMKRC);
+  }
   const results = await compileAll(workspace, docs, opts, () => tl.env(), recovery);
   phases.compile = seconds(t);
   for (const r of results) {

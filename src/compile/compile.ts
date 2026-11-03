@@ -14,7 +14,43 @@ export interface CompileOptions {
   shellEscape: "auto" | "always" | "never";
   concurrency: number;
   log?: (message: string) => void;
+  /** Extra latexmk rc file (EXTRA_LATEXMKRC written to disk), loaded with -r. */
+  extraRc?: string;
 }
+
+/**
+ * Build steps latexmk does not know by itself. Each runs only when a document
+ * produces the matching file, so the rules are safe for every build.
+ */
+export const EXTRA_LATEXMKRC = `# Added by ofree-engine.
+# glossaries: makeglossaries for .glo (main), .acn (acronyms), .slo (symbols).
+add_cus_dep('glo', 'gls', 0, 'ofree_makeglossaries');
+add_cus_dep('acn', 'acr', 0, 'ofree_makeglossaries');
+add_cus_dep('slo', 'sls', 0, 'ofree_makeglossaries');
+sub ofree_makeglossaries {
+  my ($base_name, $path) = fileparse($_[0]);
+  my @args = ('-q', $base_name);
+  push @args, '-d', $path if $path ne './';
+  return system('makeglossaries', @args);
+}
+# glossaries-extra with the record option: bib2gls writes .glstex files.
+add_cus_dep('aux', 'glstex', 0, 'ofree_bib2gls');
+sub ofree_bib2gls {
+  my ($base_name, $path) = fileparse($_[0]);
+  my @args = ('--group', $base_name);
+  push @args, '--dir', $path if $path ne './';
+  return system('bib2gls', @args);
+}
+# nomencl: makeindex with the nomencl style.
+add_cus_dep('nlo', 'nls', 0, 'ofree_makenomenclature');
+sub ofree_makenomenclature {
+  return system('makeindex', "$_[0].nlo", '-s', 'nomencl.ist', '-o', "$_[0].nls", '-t', "$_[0].nlg");
+}
+push @generated_exts, qw(glo gls glg acn acr alg slo sls slg glstex nlo nls nlg ist xdy);
+`;
+
+/** latexmk options that choose the output route themselves (DVI, PostScript). */
+const MODE_FLAGS = /^-(pdf|pdfdvi|pdfps|pdflua|pdfxe|xelatex|lualatex|dvi|ps)$/;
 
 /** Output directory set by -outdir/-output-directory arguments or by $out_dir in a .latexmkrc. */
 export function outputDirectory(cwd: string, args: string[]): string | null {
@@ -74,7 +110,10 @@ async function attempt(
   let r;
   if (opts.compiler === "latexmk") {
     const args: string[] = [];
-    if (!doc.engineFromLatexmkrc || engine !== doc.engine) args.push(ENGINE_FLAG[engine]);
+    if (opts.extraRc) args.push("-r", opts.extraRc);
+    // Respect a route the user chose (-pdfdvi, -pdfps for PSTricks), and a .latexmkrc's engine.
+    const userMode = opts.args.some((a) => MODE_FLAGS.test(a));
+    if (!userMode && (!doc.engineFromLatexmkrc || engine !== doc.engine)) args.push(ENGINE_FLAG[engine]);
     args.push(...opts.args);
     if (shellEscape) args.push("-shell-escape");
     if (force) args.push("-g");

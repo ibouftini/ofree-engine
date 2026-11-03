@@ -269,6 +269,13 @@ function scanText(
     }
   }
 
+  // Beamer themes are files named beamer[color|font|inner|outer]theme<name>.sty.
+  for (const m of text.matchAll(/\\use(color|font|inner|outer)?theme\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+    for (const name of splitNames(m[2])) addOnce(acc.requires, `beamer${m[1] ?? ""}theme${name}.sty`, ref(m.index!));
+  }
+  // glossaries-extra in record mode is built with bib2gls.
+  const record = /\\usepackage\s*\[[^\]]*\brecord\b[^\]]*\]\s*\{glossaries-extra\}|\\GlsXtrLoadResources/.exec(text);
+  if (record) addOnce(acc.requires, "bib2gls.jar", ref(record.index));
   for (const m of text.matchAll(/\\usetikzlibrary\s*\{([^}]*)\}/g)) {
     for (const lib of splitNames(m[1].replace(/\s+/g, ""))) addOnce(acc.requires, `tikzlibrary${lib}.code.tex`, ref(m.index!));
   }
