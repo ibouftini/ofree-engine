@@ -57,14 +57,16 @@ The most-used LaTeX action, `xu-cheng/latex-action`, downloads a 2.3 GiB TeX Liv
 - **Timings come from a run where most repositories had a cached TeX Live from an earlier run,** as they would in daily use.
 - **The whole-job figures include `actions/checkout`,** which takes minutes for some large repositories.
 
-On a first run with no cache, on the samples in [`bench/samples`](bench/samples):
+On the samples in [`bench/samples`](bench/samples), build step only (one run, 2026-11-03; the incumbent's time varies between 60 and 120 s from run to run):
 
-| Sample | xu-cheng/latex-action@v4 | This action, first run |
-|---|---:|---:|
-| paper (pdfLaTeX, Biber) | 70 s | 23 s |
-| arabic (XeLaTeX, polyglossia, Amiri) | 73 s | 33 s |
-| lua (LuaLaTeX, unicode-math, IEEE style) | 81 s | 29 s |
-| cv (local class, FontAwesome, Source Sans 3) | fails: XeTeX cannot see TeX Live's fonts | builds |
+| Sample | xu-cheng/latex-action@v4 | This action, first run | This action, cached |
+|---|---:|---:|---:|
+| paper (pdfLaTeX, Biber) | 91 s | 29 s | 8 s |
+| arabic (XeLaTeX, polyglossia, Amiri) | 118 s | 25 s | 4 s |
+| lua (LuaLaTeX, unicode-math, IEEE style) | 111 s | 29 s | 9 s |
+| cv (local class, FontAwesome, Source Sans 3) | 88 s | 21 s | 6 s |
+
+A first run here spends about 11 s installing about 150 packages, 7 s building formats and font indexes, and the rest compiling.
 
 ## Development
 
