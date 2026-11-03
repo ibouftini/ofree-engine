@@ -2,11 +2,6 @@ name: Spike · provisioning
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "tools/**"
-      - "bench/samples/**"
-      - ".github/workflows/spike-provision.yml"
 
 env:
   ROOTS: scheme-basic,latexmk,biblatex,biber,booktabs,siunitx

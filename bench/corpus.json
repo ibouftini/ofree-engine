@@ -1,0 +1,440 @@
+[
+ {
+  "id": "assumptionsofphysics-book",
+  "repo": "assumptionsofphysics/book",
+  "sha": "7290c7ed03c48d2fb644a3dab0c274428ee57dc2",
+  "with": {
+   "working_directory": "book",
+   "root_file": "book.tex"
+  }
+ },
+ {
+  "id": "blockstreamresearch-zk-book",
+  "repo": "BlockstreamResearch/zk-book",
+  "sha": "0699ceb2a6a1e5cb83dd837254dbca869b557901",
+  "with": {
+   "root_file": "book.tex",
+   "texlive_version": "2020",
+   "latexmk_shell_escape": "true"
+  }
+ },
+ {
+  "id": "cvxgrp-cvxcla",
+  "repo": "cvxgrp/cvxcla",
+  "sha": "106cfa430bd51521ae75f1361b3a0f5da8be1364",
+  "with": {
+   "root_file": "comparison.tex",
+   "working_directory": "docs/paper",
+   "args": "-pdf -file-line-error -halt-on-error -interaction=nonstopmode"
+  }
+ },
+ {
+  "id": "dcroote-stanford-thesis-example",
+  "repo": "dcroote/stanford-thesis-example",
+  "sha": "ffef6af633d0716fb0592b83c8ce594ed38819d2",
+  "with": {
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "executablebooks-sphinx-design",
+  "repo": "executablebooks/sphinx-design",
+  "sha": "4f66f32e160f16d73dee5eed52cd91984935763f",
+  "with": {
+   "texlive_version": "2025",
+   "working_directory": "docs/_build/latex",
+   "root_file": "sphinxdesign.tex"
+  }
+ },
+ {
+  "id": "fhdwpb-latex-thesis-template",
+  "repo": "FHDWPB/latex-thesis-template",
+  "sha": "0e73f77c440b618da1050dce1b3939c5536dcd95",
+  "with": {
+   "root_file": "Thesis.tex"
+  }
+ },
+ {
+  "id": "gboeing-cv",
+  "repo": "gboeing/cv",
+  "sha": "be25029bcf64eb3d5882bf8c10cb398a4ecd9ef2",
+  "with": {
+   "root_file": "cv-gboeing.tex"
+  }
+ },
+ {
+  "id": "harvard-edge-cs249r-book",
+  "repo": "harvard-edge/cs249r_book",
+  "sha": "8dd8e32dffbaaf4ab0d43267a4a409b2239c8172",
+  "with": {
+   "root_file": "paper.tex",
+   "working_directory": "staffml/paper"
+  }
+ },
+ {
+  "id": "haskellfoundation-haskell-2010-revised-report",
+  "repo": "haskellfoundation/haskell-2010-revised-report",
+  "sha": "4b216d654d75ce6343d8a21b44794690965218c9",
+  "with": {
+   "working_directory": "stdlib/latex",
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "iydon-sustechthesis",
+  "repo": "iydon/sustechthesis",
+  "sha": "8a2fb7559dcdbe7d014a66d1d8e0dbc44db60bb9",
+  "with": {
+   "root_file": "main.tex\nmain_english.tex\nslides.tex\n",
+   "latexmk_use_xelatex": "true"
+  }
+ },
+ {
+  "id": "nag-devops-speed-hpc",
+  "repo": "NAG-DevOps/speed-hpc",
+  "sha": "e45df3cbfaa1c99a362032b991207fe436bdedcc",
+  "with": {
+   "root_file": "speed-manual.tex",
+   "working_directory": "doc/",
+   "work_in_root_file_dir": "true",
+   "continue_on_error": "true",
+   "compiler": "latexmk",
+   "args": "-pdf -file-line-error -interaction=nonstopmode",
+   "latexmk_use_lualatex": "false",
+   "latexmk_use_xelatex": "false"
+  }
+ },
+ {
+  "id": "openhutb-neuro",
+  "repo": "OpenHUTB/neuro",
+  "sha": "949766a3efd462baef6158678a58a81abc305704",
+  "with": {
+   "root_file": "neuro.tex",
+   "texlive_version": "2025",
+   "latexmk_use_xelatex": "true"
+  }
+ },
+ {
+  "id": "ruiguoz-nwpu-beamer",
+  "repo": "ruiguoz/NWPU-BEAMER",
+  "sha": "68232f96796065fcce2a76512168ca5f0d6760e9",
+  "with": {
+   "root_file": "main.tex",
+   "latexmk_use_xelatex": "true",
+   "texlive_version": "2026"
+  }
+ },
+ {
+  "id": "spacelab-ufsc-obdh2",
+  "repo": "spacelab-ufsc/obdh2",
+  "sha": "3f0ad36d8c20eb2a0200928d99f2a85b7b0e4df3",
+  "with": {
+   "working_directory": "doc/presentation",
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "spamegg1-epp-discrete-math-5th-solutions",
+  "repo": "spamegg1/Epp-Discrete-Math-5th-solutions",
+  "sha": "e927daf5afcbfd761ae51d59ccc98f76d31522a1",
+  "with": {
+   "working_directory": "src",
+   "root_file": "Epp.tex",
+   "latexmk_shell_escape": "true"
+  }
+ },
+ {
+  "id": "spamegg1-epp-discrete-math-5th-solutions-2",
+  "repo": "spamegg1/Epp-Discrete-Math-5th-solutions",
+  "sha": "e927daf5afcbfd761ae51d59ccc98f76d31522a1",
+  "with": {
+   "working_directory": "src",
+   "root_file": "Epp.tex",
+   "latexmk_shell_escape": "true"
+  }
+ },
+ {
+  "id": "ucl-tdms",
+  "repo": "UCL/TDMS",
+  "sha": "d9d5ad58dc1fa6b455c9bec7b5b6114f386e1e76",
+  "with": {
+   "root_file": "masterdoc.tex",
+   "working_directory": "doc/latex"
+  }
+ },
+ {
+  "id": "varaprasad6700-resume",
+  "repo": "varaprasad6700/resume",
+  "sha": "0d4f57faffbe940738f0819be14e1928cc488bef",
+  "with": {
+   "root_file": "resume.tex"
+  }
+ },
+ {
+  "id": "ac-pate-latex-resume",
+  "repo": "ac-pate/LaTeX-Resume",
+  "sha": "b6ac5852462adbe7c5070289336a09bc77944f21",
+  "with": {
+   "root_file": "resume_2025.tex"
+  }
+ },
+ {
+  "id": "adolbyb-icom-706-mkiig",
+  "repo": "ADolbyB/icom-706-mkiig",
+  "sha": "908edeaf839c0148f778176dd4b04ebb07a75a5d",
+  "with": {
+   "root_file": "OOBmod.tex",
+   "working_directory": "docs/OOBmod"
+  }
+ },
+ {
+  "id": "agathasamuel-tugas-akhir",
+  "repo": "AgathaSamuel/TUGAS-AKHIR",
+  "sha": "b07e49d8ebd43c0001436d73058a9595ba465918",
+  "with": {
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "ahmed-alhindawi-latex-template",
+  "repo": "ahmed-alhindawi/latex-template",
+  "sha": "e787bb7a8555a0be130df081371163bb1649c40e",
+  "with": {
+   "root_file": "main.tex",
+   "working_directory": "."
+  }
+ },
+ {
+  "id": "aliaumel-word-ordering-wqo",
+  "repo": "AliaumeL/word-ordering-wqo",
+  "sha": "ed5e2b8f6dd5681bd07e8deac31d719dc4fa0b3d",
+  "with": {
+   "root_file": "wqo-on-words.tex\nwqo-on-words.lncs.tex\nwqo-on-words.lipics.tex\n"
+  }
+ },
+ {
+  "id": "anastasia-labs-midgard",
+  "repo": "Anastasia-Labs/midgard",
+  "sha": "41284d8974568f47ef35cb96e23acbf1b56894c2",
+  "with": {
+   "root_file": "midgard.tex",
+   "working_directory": "technical-spec/"
+  }
+ },
+ {
+  "id": "andstor-tex-paper-template",
+  "repo": "andstor/tex-paper-template",
+  "sha": "bef5472df3e1d439403e017a3ae057d01c469aea",
+  "with": {
+   "root_file": "main.tex",
+   "extra_system_packages": "perl-file-which",
+   "latexmk_shell_escape": "true"
+  }
+ },
+ {
+  "id": "bagaswizard-buku-ta",
+  "repo": "bagaswizard/Buku_TA",
+  "sha": "322081235295f91eb89b51edb8874588e834b0a8",
+  "with": {
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "bipplane-resume-latex",
+  "repo": "bipplane/resume-latex",
+  "sha": "4b7fe3bbc2bd7eb5daff679eff91ad40aec80520",
+  "with": {
+   "root_file": "resume.tex"
+  }
+ },
+ {
+  "id": "cao-wuhui-szu-latex-master-template",
+  "repo": "Cao-Wuhui/SZU_Latex_Master_Template",
+  "sha": "79c3ba378a933be2427d0787638458f9a45bce2d",
+  "with": {
+   "root_file": "master_pang.tex",
+   "latexmk_use_xelatex": "true",
+   "extra_system_packages": "font-noto-cjk font-dejavu fontconfig curl cabextract",
+   "extra_fonts": "./simsun.ttc\n./songti-Bold.otf\n./lucida-console.ttf\n",
+   "pre_compile": "# The footnote code in master_pang.tex checks fonts in order:\n#   Noto Sans Symbols 2 \u2192 Segoe UI Symbol \u2192 Symbola \u2192 Arial Unicode MS \u2192 DejaVu Sans\n# Noto Sans Symbols 2 doesn't contain \u2460\u2461\u2462 (U+2460), and Symbola has\n# stale TeX Live references that trick \\IfFontExistsTF but fail to load.\n# Remove both so the chain reaches DejaVu Sans, which has \u2460-\u2473.\nfind /usr/share/fonts -name '*Symbols2*' -delete 2>/dev/null || true\nfind /opt/texlive -name '*Symbols2*' -delete 2>/dev/null || true\nfind /opt/texlive -name '*ymbola*' -delete 2>/dev/null || true\n\n# Download and install Microsoft core fonts (Times New Roman, Arial)\n(\n  mkdir -p /tmp/msfonts && cd /tmp/msfonts\n  curl -sLO \"https://sourceforge.net/projects/corefonts/files/the%20fonts/final/arial32.exe\"\n  curl -sLO \"https://sourceforge.net/projects/corefonts/files/the%20fonts/final/times32.exe\"\n  cabextract -q *.exe\n  mkdir -p /usr/share/fonts/msttcorefonts\n  find . -iname '*.ttf' -exec cp {} /usr/share/fonts/msttcorefonts/ \\;\n)\n\n# SimHei is not available in standard Linux font repos;\n# map it to Noto Sans CJK SC via fontconfig alias.\n# To use the real SimHei, add simhei.ttf to the repo and extra_fonts list.\ncat > /etc/fonts/conf.d/99-simhei-alias.conf << 'FONTCFG'\n<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n<fontconfig>\n  <alias>\n    <family>SimHei</family>\n    <prefer><family>Noto Sans CJK SC</family></prefer>\n  </alias>\n</fontconfig>\nFONTCFG\n\nfc-cache -fv\n"
+  }
+ },
+ {
+  "id": "capitan-parrot-salary-estimator",
+  "repo": "Capitan-Parrot/salary-estimator",
+  "sha": "7532373195a841101d40ccf953cbdf59a103ce8d",
+  "with": {
+   "root_file": "main.tex",
+   "working_directory": "docs/latex",
+   "args": "-pdf -interaction=nonstopmode -file-line-error"
+  }
+ },
+ {
+  "id": "cengkooo-proposal-imul-123140205",
+  "repo": "cengkooo/proposal-imul-123140205",
+  "sha": "aec1a3f5ff76526fc348ab17e1f2b66770f7a7de",
+  "with": {
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "ctex-org-lshort-zh-cn",
+  "repo": "CTeX-org/lshort-zh-cn",
+  "sha": "3b6fbb2f88f81eb12a405db0988e53702cac10ee",
+  "with": {
+   "root_file": "lshort-zh-cn.tex",
+   "working_directory": "src",
+   "args": "-r latexmkrc"
+  }
+ },
+ {
+  "id": "david-alvarez-rosa-curriculum-vitae",
+  "repo": "david-alvarez-rosa/curriculum-vitae",
+  "sha": "92dcf32a8e0b484d41229b65a8b6e42ef6cadcec",
+  "with": {
+   "root_file": "david-alvarez-rosa-cv.tex",
+   "latexmk_use_xelatex": "false"
+  }
+ },
+ {
+  "id": "diebrate-diebrate-github-io",
+  "repo": "Diebrate/Diebrate.github.io",
+  "sha": "4ac87cd619a3e0d03b8cdd97bdd206dbd5c05b6f",
+  "with": {
+   "root_file": "resume_special.tex",
+   "working_directory": "resume",
+   "args": "-pdf -outdir=build -file-line-error -halt-on-error -interaction=nonstopmode"
+  }
+ },
+ {
+  "id": "digama0-conzf",
+  "repo": "digama0/ConZF",
+  "sha": "ac9f5938defe171bcdbef7e5469bc4a489392c17",
+  "with": {
+   "working_directory": "doc",
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "digo-certify-digo-certify-app",
+  "repo": "DiGo-Certify/DiGo-certify-app",
+  "sha": "0f0c8229551712f8f4f23e996555362eab514843",
+  "with": {
+   "root_file": "report.tex",
+   "working_directory": "./docs/final-report",
+   "extra_system_packages": "inkscape"
+  }
+ },
+ {
+  "id": "dknaack-master-thesis",
+  "repo": "dknaack/master-thesis",
+  "sha": "7b7691f149a91766fbacd33e3a173182a2129e67",
+  "with": {
+   "root_file": "figures/lattice.tex\nslides.tex\nmain.tex\n",
+   "args": "-lualatex -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build",
+   "latexmk_use_lualatex": "true"
+  }
+ },
+ {
+  "id": "dr-richard-barker-osdr-x-species-v2",
+  "repo": "dr-richard-barker/OSDR_X-species_V2",
+  "sha": "5fdfb5154b0ebdfe604765bad7f00105e90ce2b2",
+  "with": {
+   "working_directory": "manuscript/latex",
+   "root_file": "main.tex",
+   "latexmk_use_xelatex": "false"
+  }
+ },
+ {
+  "id": "eagleoutice-eagle-maps",
+  "repo": "EagleoutIce/eagle-maps",
+  "sha": "4b9f252249b7a8dde8f328ce7bca10266f1caed5",
+  "with": {
+   "root_file": "eagle-maps.tex"
+  }
+ },
+ {
+  "id": "erik-donath-mutau-rv32-soc",
+  "repo": "Erik-Donath/muTau-RV32-SoC",
+  "sha": "6d37bfeac9128d1ca4ff1f991b048dc3f7b518f7",
+  "with": {
+   "working_directory": "docs/",
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "fascetta-tool-lora-skill-ir",
+  "repo": "Fascetta/tool-lora-skill-ir",
+  "sha": "5e5b430ace4e96e20b9ce07e5551b755145e264e",
+  "with": {
+   "working_directory": "report",
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "feathbow-tju-rl-template",
+  "repo": "FeathBow/TJU-RL-template",
+  "sha": "3ae6c557d057d30c985aa00066022c04debbd906",
+  "with": {
+   "root_file": "main.tex",
+   "latexmk_use_xelatex": "true",
+   "args": "-pdf -file-line-error -halt-on-error -interaction=nonstopmode"
+  }
+ },
+ {
+  "id": "firefly-cpp-cover-letter-latex",
+  "repo": "firefly-cpp/cover-letter-latex",
+  "sha": "0dc422505a1ea92d5bfe688f2aa1acf87dcee405",
+  "with": {
+   "root_file": "jourcl.tex"
+  }
+ },
+ {
+  "id": "fmuro-alg1",
+  "repo": "FMuro/alg1",
+  "sha": "65caa5795da9d78fd4a781f613353c946ed831de",
+  "with": {
+   "root_file": "main.tex"
+  }
+ },
+ {
+  "id": "franzmohr-fincommons",
+  "repo": "franzmohr/fincommons",
+  "sha": "f0c109d6027a442294cd43980128eef68cc0385f",
+  "with": {
+   "root_file": "fincommons.tex",
+   "working_directory": "docs/handbook",
+   "latexmk_use_lualatex": "false"
+  }
+ },
+ {
+  "id": "garebear99-freeeq8",
+  "repo": "GareBear99/FreeEQ8",
+  "sha": "11376c1c496569c975e4d195c3fe5fd44b53d415",
+  "with": {
+   "root_file": "DAFx26_SIMPLE.tex",
+   "working_directory": "paper/dafx_submit"
+  }
+ },
+ {
+  "id": "ghdaru-tesedaru",
+  "repo": "GHDaru/tesedaru",
+  "sha": "1a6d1915514c0b3072be6e2f77d74bbdc5acf01d",
+  "with": {
+   "root_file": "principal.tex",
+   "latexmk_use_xelatex": "false",
+   "args": "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
+  }
+ },
+ {
+  "id": "guilhermemarchi-guide",
+  "repo": "GuilhermeMarchi/guide",
+  "sha": "478cfa5193822f7fe7fbccb8ed86b74e30efda9e",
+  "with": {
+   "root_file": "IPLeiriaMain.tex",
+   "latexmk_use_xelatex": "true",
+   "latexmk_shell_escape": "true",
+   "extra_fonts": "./Configurations/Fonts/*.ttf\n./Configurations/Fonts/*.otf"
+  }
+ }
+]

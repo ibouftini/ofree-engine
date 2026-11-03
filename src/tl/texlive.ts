@@ -60,12 +60,45 @@ export class TexLive {
   }
 
   env(): NodeJS.ProcessEnv {
-    return {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       PATH: `${this.bin}${delimiter}${process.env.PATH ?? ""}`,
       // Biber unpacks itself on first run; keep that inside the cached tree.
       PAR_GLOBAL_TEMP: join(this.texdir, ".ofree", "par"),
     };
+    if (existsSync(this.fontconfigFile())) env.FONTCONFIG_FILE = this.fontconfigFile();
+    return env;
+  }
+
+  private fontconfigFile() {
+    return join(this.texdir, ".ofree", "fonts.conf");
+  }
+
+  /**
+   * XeTeX finds fonts by name through fontconfig, which does not know TeX
+   * Live's font folders. Register them (after the system configuration, so
+   * system fonts still work) and keep fontconfig's cache inside the cached tree.
+   */
+  async ensureFontconfig(): Promise<void> {
+    const cacheDir = join(this.texdir, ".ofree", "fontconfig");
+    const dirs = ["opentype", "truetype"].map((d) => join(this.texdir, "texmf-dist", "fonts", d));
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(
+      this.fontconfigFile(),
+      [
+        `<?xml version="1.0"?>`,
+        `<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">`,
+        `<fontconfig>`,
+        `  <cachedir>${cacheDir}</cachedir>`,
+        `  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>`,
+        ...dirs.map((d) => `  <dir>${d}</dir>`),
+        `</fontconfig>`,
+        ``,
+      ].join("\n"),
+    );
+    if (this.changed || readdirSync(cacheDir).length === 0) {
+      await run("fc-cache", dirs.filter((d) => existsSync(d)), { env: this.env() });
+    }
   }
 
   private manifestPath() {
@@ -155,8 +188,10 @@ export class TexLive {
         `TEXMFLOCAL ${t}/texmf-local`,
         `TEXMFSYSCONFIG ${t}/texmf-config`,
         `TEXMFSYSVAR ${t}/texmf-var`,
-        `TEXMFCONFIG ${t}/texmf-config`,
-        `TEXMFVAR ${t}/texmf-var`,
+        // User trees separate from system trees, or on-the-fly generation
+        // (mktexfmt, mktexpk) refuses to run. Both stay inside the cached tree.
+        `TEXMFCONFIG ${t}/texmf-userconfig`,
+        `TEXMFVAR ${t}/texmf-uservar`,
         `TEXMFHOME ${t}/texmf-home`,
         "instopt_adjustpath 0",
         "instopt_adjustrepo 0",

@@ -6,7 +6,7 @@ import { closure, type Tlpdb } from "../tl/tlpdb.js";
 import type { DocumentPlan, Ref } from "./scan.js";
 
 /** Bump when the layout of a cached TeX Live changes incompatibly. */
-export const LAYOUT_VERSION = "1";
+export const LAYOUT_VERSION = "2";
 
 /** Packages every build gets, whatever the document. */
 const BASE = ["scheme-basic", "latexmk"];

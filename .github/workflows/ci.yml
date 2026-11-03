@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
       - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - name: Fetch the TeX Live package database for the real-data tests

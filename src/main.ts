@@ -96,6 +96,7 @@ async function main() {
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
   }
   await tl.ensureFormats(docs.map((d) => d.engine));
+  await tl.ensureFontconfig();
   phases.provision = seconds(t);
 
   // 3. Optional user setup (compatibility inputs).
