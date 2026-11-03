@@ -2,7 +2,7 @@ name: Spike · runners
 
 # The action on runners other than x86 Ubuntu 24.04: ARM, macOS, the next
 # Ubuntu (ubuntu-latest moves to it), and a container job without sudo.
-# Rerun after: fonts linked for XeTeX on macOS.
+# Rerun after: fonts linked for XeTeX on macOS (call added).
 
 on:
   workflow_dispatch:

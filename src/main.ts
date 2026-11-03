@@ -259,6 +259,9 @@ async function main() {
     core.warning(`"${f.name}" cannot be downloaded, so ${f.family} is used instead. ${f.note ?? ""} To use ${f.name} itself, add its font files to the repository.`, { title: `Font ${f.name} replaced by ${f.family}` });
   }
   if (fonts.changed) tl.changed = true;
+  if (process.platform === "darwin" && docs.some((d) => d.engine === "xelatex")) {
+    core.info(`Made ${tl.exposeFontsToMacOS(homedir())} font files visible to XeTeX on macOS`);
+  }
   core.info(`Formats and fonts ready in ${seconds(s)} s`);
   phases.provision = seconds(t);
 
