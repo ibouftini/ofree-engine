@@ -18,8 +18,8 @@ export type Missing =
 export interface LogFindings {
   problems: Problem[];
   missing: Missing[];
-  /** The document needs XeLaTeX or LuaLaTeX ("xelatex" when either works). */
-  needsUnicodeEngine: "xelatex" | "lualatex" | null;
+  /** The document needs a Unicode engine: one of them in particular, or "either". */
+  needsUnicodeEngine: "either" | "xelatex" | "lualatex" | null;
   needsShellEscape: boolean;
   pages: number | null;
   /** Last "Output written on X" path (may be in an -outdir), relative to the compile directory. */
@@ -68,13 +68,23 @@ export function parseLog(raw: string): LogFindings {
     if (/^[\w.-]+$/.test(m[1]) && !m[1].includes(".tex")) missing.push({ kind: "program", name: m[1] });
   }
 
+  // Wordings vary ("requires LuaTeX", "only works with LuaTeX", babel's "is
+  // available only in luatex"), and TeX may wrap a message between any words.
+  const only = (engine: string) =>
+    new RegExp(
+      `requires\\s+${engine}\\b(?!\\s+or)|must\\s+be\\s+(?:used|run)\\s+with\\s+${engine}\\b(?!\\s+or)|needs\\s+to\\s+be\\s+run\\s+with\\s+${engine}|` +
+        `only\\s+(?:works|runs|available|supported)\\s+(?:in|with|under)\\s+${engine}|(?:available|works|runs|supported)\\s+only\\s+(?:in|with|under)\\s+${engine}`,
+      "i",
+    );
   let needsUnicodeEngine: LogFindings["needsUnicodeEngine"] = null;
-  if (/requires (?:either )?XeTeX or LuaTeX|must be (?:used|run) with (?:either )?XeTeX or LuaTeX|fontspec package requires/i.test(output))
-    needsUnicodeEngine = "xelatex";
-  if (/requires LuaTeX|needs to be run with LuaLaTeX|only works with LuaTeX|This package only runs with LuaTeX|luatexja.*requires LuaTeX/i.test(output))
-    needsUnicodeEngine = "lualatex";
-  else if (/requires XeTeX|must be used with XeTeX|only works with XeTeX/i.test(output) && !needsUnicodeEngine)
-    needsUnicodeEngine = "xelatex";
+  if (/requires\s+(?:either\s+)?XeTeX\s+or\s+LuaTeX|must\s+be\s+(?:used|run)\s+with\s+(?:either\s+)?XeTeX\s+or\s+LuaTeX|fontspec\s+package\s+requires/i.test(output))
+    needsUnicodeEngine = "either";
+  // Only errors count: warnings and banners also mention engines ("... only in LuaTeX; ignored").
+  // TeX breaks log lines at 79 characters, even inside a word ("Package babel E\nrror").
+  const rawLines = output.replace(/^(.{79})\n/gm, "$1").split("\n");
+  const errorText = rawLines.flatMap((l, i) => (/Error|^! /.test(l) ? [rawLines.slice(i, i + 3).join(" ")] : [])).join("\n");
+  if (only("Lua(?:La)?TeX").test(errorText)) needsUnicodeEngine = "lualatex";
+  else if (only("Xe(?:La)?TeX").test(errorText)) needsUnicodeEngine = "xelatex";
 
   const needsShellEscape = /-shell-escape|shell escape is disabled|--enable-write18|You must invoke LaTeX with/i.test(output);
 

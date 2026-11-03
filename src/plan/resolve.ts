@@ -22,6 +22,7 @@ export function requirementTokens(docs: DocumentPlan[], extraPackages: string[] 
     if (d.bibTool) tokens.add(`bib:${d.bibTool}`);
     for (const f of d.requires.keys()) tokens.add(`file:${f}`);
     for (const l of d.languages.keys()) tokens.add(`lang:${l}`);
+    for (const l of d.locales.keys()) tokens.add(`locale:${l}`);
     for (const f of d.fonts.keys()) tokens.add(`font:${f}`);
   }
   for (const p of extraPackages) tokens.add(`pkg:${p}`);
@@ -79,6 +80,15 @@ export function fontPackage(db: Tlpdb, fileIndex: Map<string, string>, font: str
   return best?.[1];
 }
 
+/** TeX Live's hyphenation patterns for a language; babel locale names may add a variant ("greek-polytonic"). */
+export function hyphenationPackage(db: Tlpdb, lang: string): string | undefined {
+  for (const name of new Set([lang, lang.split("-")[0]])) {
+    const alias = HYPHEN_ALIASES[name] ?? name;
+    if (alias && db.packages.has(`hyphen-${alias}`)) return `hyphen-${alias}`;
+  }
+  return undefined;
+}
+
 /** Packages for a babel/polyglossia language: its definition file and its hyphenation patterns. */
 export function languagePackages(db: Tlpdb, fileIndex: Map<string, string>, lang: string): string[] {
   const out: string[] = [];
@@ -90,8 +100,8 @@ export function languagePackages(db: Tlpdb, fileIndex: Map<string, string>, lang
     (db.packages.has(`babel-${lang}`) ? `babel-${lang}` : undefined) ??
     fileIndex.get(`gloss-${lang}.ldf`);
   if (ldf) out.push(ldf);
-  const alias = HYPHEN_ALIASES[lang] ?? lang;
-  if (alias && db.packages.has(`hyphen-${alias}`)) out.push(`hyphen-${alias}`);
+  const hyphen = hyphenationPackage(db, lang);
+  if (hyphen) out.push(hyphen);
   return out;
 }
 
@@ -135,6 +145,11 @@ export function resolvePackages(
 
     for (const [lang, ref] of d.languages) {
       for (const pkg of languagePackages(db, fileIndex, lang)) want(pkg, `language ${lang} (${at(ref)})`);
+    }
+    // babel ships the .ini files itself; many languages have no patterns at all.
+    for (const [lang, ref] of d.locales) {
+      const pkg = hyphenationPackage(db, lang);
+      if (pkg) want(pkg, `language ${lang} (${at(ref)})`);
     }
 
     for (const [font, ref] of d.fonts) {

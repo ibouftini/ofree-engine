@@ -84,7 +84,7 @@ export function summaryMarkdown(f: RunFacts): string {
     const extra = [
       r.doc.bibTool ? `bibliography: ${r.doc.bibTool}` : "",
       r.shellEscape ? `shell escape on${r.doc.shellEscape ? ` (${esc(r.doc.shellEscape.reason)}, ${r.doc.shellEscape.file}:${r.doc.shellEscape.line})` : ""}` : "",
-      r.doc.languages.size ? `languages: ${[...r.doc.languages.keys()].join(", ")}` : "",
+      r.doc.languages.size + r.doc.locales.size ? `languages: ${[...new Set([...r.doc.languages.keys(), ...r.doc.locales.keys()])].join(", ")}` : "",
       r.attempts > 1 ? `${r.attempts} attempts` : "",
       ...r.notes.map(esc),
     ].filter(Boolean);

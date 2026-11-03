@@ -151,6 +151,7 @@ export async function compileDocument(
   const notes: string[] = [];
   let force = false;
   let retriedAfterFonts = false;
+  const triedEngines = new Set<Engine>([engine]);
   let last!: Awaited<ReturnType<typeof attempt>>;
   let findings!: LogFindings;
   let rounds = 0;
@@ -177,9 +178,12 @@ export async function compileDocument(
         continue;
       }
     }
-    if (findings.needsUnicodeEngine && engine === "pdflatex") {
-      engine = findings.needsUnicodeEngine;
-      notes.push(`Switched to ${ENGINE_NAME[engine]}: the document needs a Unicode engine`);
+    const needed = findings.needsUnicodeEngine;
+    const next: Engine | null = needed === "either" ? (engine === "pdflatex" ? "xelatex" : null) : needed !== engine ? needed : null;
+    if (next && !triedEngines.has(next)) {
+      triedEngines.add(next);
+      engine = next;
+      notes.push(`Switched to ${ENGINE_NAME[engine]}: ${needed === "either" ? "the document needs a Unicode engine" : `the document works only with ${ENGINE_NAME[engine]}`}`);
       await recovery.ensureEngine(engine);
       force = true;
       continue;

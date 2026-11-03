@@ -69,9 +69,30 @@ describe("parseLog", () => {
 
   it("detects documents that need a Unicode engine", () => {
     expect(parseLog("! Fatal Package fontspec Error: The fontspec package requires either XeTeX or\n(fontspec) LuaTeX.").needsUnicodeEngine).toBe(
-      "xelatex",
+      "either",
     );
     expect(parseLog("! Package luatexja Error: This package requires LuaTeX.").needsUnicodeEngine).toBe("lualatex");
+    expect(parseLog("! Package xeCJK Error: The xeCJK package requires XeTeX to function.").needsUnicodeEngine).toBe("xelatex");
+  });
+
+  it("reads babel's LuaTeX-only error, wrapped over continuation lines", () => {
+    const log = [
+      "./main.tex:4: Package babel Error: The bidi method 'basic' is available only in",
+      "(babel)                luatex. I'll continue with 'bidi=default', so",
+      "(babel)                expect wrong results.",
+    ].join("\n");
+    expect(parseLog(log).needsUnicodeEngine).toBe("lualatex");
+    // In the .log, TeX breaks the first line at 79 characters, inside "Error".
+    const wrapped = [
+      "/usr/share/texlive/texmf-dist/tex/generic/babel/babel.sty:3981: Package babel E",
+      "rror: The bidi method 'basic' is available only in",
+      "(babel)                luatex. I'll continue with 'bidi=default', so",
+    ].join("\n");
+    expect(parseLog(wrapped).needsUnicodeEngine).toBe("lualatex");
+  });
+
+  it("ignores engine requirements mentioned in warnings", () => {
+    expect(parseLog("Package foo Warning: Feature bar is only available in LuaTeX; ignored.").needsUnicodeEngine).toBeNull();
   });
 
   it("reports errors with file and line, and the page count", () => {

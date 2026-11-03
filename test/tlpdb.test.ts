@@ -79,6 +79,16 @@ describe.skipIf(!real || !existsSync(real))("real texlive.tlpdb", () => {
     expect(languagePackages(db, index, "french")).toEqual(["babel-french", "hyphen-french"]);
   });
 
+  it("gives languages from babel's .ini files their hyphenation patterns only", () => {
+    const doc = planDocument(join(import.meta.dirname, "..", "bench", "samples", "bidi"), "main.tex");
+    const r = resolvePackages(db, index, arch, [doc]);
+    expect(r.unresolved).toEqual([]);
+    for (const p of ["hyphen-hebrew", "hyphen-arabic", "culmus", "amiri"]) expect(r.packages.has(p), p).toBe(true);
+    // arabi ships arabic.ldf, which babel does not load for \babelprovide.
+    expect(r.packages.has("arabi")).toBe(false);
+    expect(r.packages.has("xetex")).toBe(false);
+  });
+
   it("resolves the fixture thesis without leftovers", () => {
     const doc = planDocument(join(import.meta.dirname, "fixtures", "thesis"), "main.tex");
     const r = resolvePackages(db, index, arch, [doc]);

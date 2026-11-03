@@ -68,6 +68,22 @@ describe("planDocument", () => {
     expect([...book.requires.keys()]).toEqual(expect.arrayContaining(["plainnat.bst", "makeidx.sty", "natbib.sty"]));
   });
 
+  it("chooses LuaLaTeX for babel features only LuaTeX implements, and records .ini languages", () => {
+    const samples = join(import.meta.dirname, "..", "bench", "samples");
+    const bidi = planDocument(join(samples, "bidi"), "main.tex");
+    expect(bidi.engine).toBe("lualatex");
+    expect(bidi.engineReason).toBe("babel bidi=basic (main.tex:4)");
+    expect([...bidi.languages.keys()]).toEqual(["english"]);
+    expect([...bidi.locales.keys()]).toEqual(["hebrew", "arabic", "persian"]);
+
+    // provide+=* loads the non-main languages from .ini files; arabic is the main one.
+    const d = planDocument(fx("babelini"), "main.tex");
+    expect(d.engine).toBe("lualatex");
+    expect(d.engineReason).toBe("\\babelposthyphenation (main.tex:4)");
+    expect([...d.languages.keys()]).toEqual(["arabic"]);
+    expect([...d.locales.keys()]).toEqual(["english", "greek-polytonic"]);
+  });
+
   it("scans a local class and drops it from the TeX Live requirements", () => {
     const d = planDocument(fx("localcls"), "cv.tex");
     expect(d.requires.has("mycv.cls")).toBe(false);

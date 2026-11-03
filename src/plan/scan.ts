@@ -28,6 +28,8 @@ export interface DocumentPlan {
   requires: Map<string, Ref>;
   /** Babel or polyglossia language names. */
   languages: Map<string, Ref>;
+  /** Languages babel loads from its own .ini files (\babelprovide, provide=*); TeX Live adds only their hyphenation patterns. */
+  locales: Map<string, Ref>;
   /** Font names given to fontspec-style commands. */
   fonts: Map<string, Ref>;
   bibTool: "biber" | "bibtex" | null;
@@ -153,10 +155,12 @@ const XE_SIGNALS = ["fontspec", "polyglossia", "unicode-math", "xunicode", "xltx
 interface Accumulator {
   requires: Map<string, Ref>;
   languages: Map<string, Ref>;
+  locales: Map<string, Ref>;
   fonts: Map<string, Ref>;
   packages: Map<string, Ref>;
   directive: { engine: Engine; ref: Ref } | null;
-  luaCommand: Ref | null;
+  /** Something only LuaTeX runs: Lua code, or a babel feature implemented in Lua. */
+  luaFeature: { reason: string; ref: Ref } | null;
   biblatex: { backend: string; ref: Ref } | null;
   bibtex: Ref | null;
   shellEscape: (Ref & { reason: string }) | null;
@@ -220,9 +224,14 @@ function scanText(
       addOnce(acc.packages, name, r);
       addOnce(acc.requires, name + ".sty", r);
       if (name === "babel") {
-        for (const opt of splitNames(options)) {
-          const lang = opt.startsWith("main=") ? opt.slice(5) : opt;
-          if (/^[A-Za-z]+$/.test(lang)) addOnce(acc.languages, lang.toLowerCase(), r);
+        const opts = splitNames(options);
+        const langs = opts.map((o) => (o.startsWith("main=") ? o.slice(5) : o)).filter((l) => /^[A-Za-z]+$/.test(l)).map((l) => l.toLowerCase());
+        const main = (opts.find((o) => o.startsWith("main="))?.slice(5) ?? langs.at(-1))?.toLowerCase();
+        // provide=* (main language), provide+=* (the others), provide*=* (all) load languages from .ini files.
+        const provide = opts.map((o) => /^provide([*+]?)=\*$/.exec(o)?.[1]).find((f) => f !== undefined);
+        for (const lang of langs) {
+          const ini = provide === "*" || (provide === "" && lang === main) || (provide === "+" && lang !== main);
+          addOnce(ini ? acc.locales : acc.languages, lang, r);
         }
       }
       if (name === "biblatex") {
@@ -283,11 +292,14 @@ function scanText(
   for (const m of text.matchAll(/\\usepgfplotslibrary\s*\{([^}]*)\}/g)) {
     for (const lib of splitNames(m[1].replace(/\s+/g, ""))) addOnce(acc.requires, `tikzlibrarypgfplots.${lib}.code.tex`, ref(m.index!));
   }
-  for (const m of text.matchAll(/\\usegdlibrary\s*\{/g)) {
-    if (!acc.luaCommand) acc.luaCommand = ref(m.index!);
+  if (!acc.luaFeature) {
+    const lua = /\\(?:usegdlibrary|directlua)\s*\{/.exec(text);
+    if (lua) acc.luaFeature = { reason: "Lua code", ref: ref(lua.index) };
   }
-  for (const m of text.matchAll(/\\directlua\s*\{/g)) {
-    if (!acc.luaCommand) acc.luaCommand = ref(m.index!);
+  // babel implements these only for LuaTeX; with XeTeX it stops with an error.
+  if (!acc.luaFeature) {
+    const b = /\bbidi\s*=\s*basic(?:-r)?\b|\\babel(?:pre|post)hyphenation\b/.exec(text);
+    if (b) acc.luaFeature = { reason: b[0].startsWith("\\") ? b[0] : `babel ${b[0].replace(/\s+/g, "")}`, ref: ref(b.index) };
   }
   for (const m of text.matchAll(/\\bibliographystyle\s*\{([^}]+)\}/g)) {
     const style = m[1].trim();
@@ -299,6 +311,9 @@ function scanText(
   }
   for (const m of text.matchAll(/\\(?:setdefaultlanguage|setmainlanguage|setotherlanguages?)\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
     for (const lang of splitNames(m[1])) addOnce(acc.languages, lang.toLowerCase(), ref(m.index!));
+  }
+  for (const m of text.matchAll(/\\babelprovide\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+    for (const lang of splitNames(m[1])) if (/^[A-Za-z-]+$/.test(lang)) addOnce(acc.locales, lang.toLowerCase(), ref(m.index!));
   }
   const fontRes = [
     /\\set(?:CJK)?(?:main|sans|mono|math)font\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
@@ -387,10 +402,11 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
   const acc: Accumulator = {
     requires: new Map(),
     languages: new Map(),
+    locales: new Map(),
     fonts: new Map(),
     packages: new Map(),
     directive: null,
-    luaCommand: null,
+    luaFeature: null,
     biblatex: null,
     bibtex: null,
     shellEscape: null,
@@ -426,9 +442,9 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
   } else if (lua) {
     engine = "lualatex";
     engineReason = `${lua} (${fmt(acc.packages.get(lua)!)})`;
-  } else if (acc.luaCommand) {
+  } else if (acc.luaFeature) {
     engine = "lualatex";
-    engineReason = `Lua code (${fmt(acc.luaCommand)})`;
+    engineReason = `${acc.luaFeature.reason} (${fmt(acc.luaFeature.ref)})`;
   } else if (xe) {
     engine = "xelatex";
     engineReason = `${xe} (${fmt(acc.packages.get(xe)!)})`;
@@ -460,6 +476,7 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     engineFromLatexmkrc,
     requires: acc.requires,
     languages,
+    locales: acc.locales,
     fonts: acc.fonts,
     bibTool,
     shellEscape: acc.shellEscape,
