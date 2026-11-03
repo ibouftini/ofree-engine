@@ -196,6 +196,12 @@ const TEX_RULES = /^(?:latex|pdflatex|lualatex|xelatex|platex|uplatex)$/;
  */
 export function toolErrors(output: string, texErrors: number): Issue[] {
   const out: Issue[] = [];
+  // latexmk stops before running anything when a .latexmkrc does not compile.
+  const rc = /Latexmk: Initialization file '([^']+)' gave an error:\s*\n\s*(.+)/.exec(output);
+  if (rc) {
+    const file = rc[1].split("/").pop();
+    return [{ message: rc[2].trim(), source: "latexmk", lines: [], hint: `${file} has a Perl error, so latexmk stopped before running anything.` }];
+  }
   for (const m of output.matchAll(/^(x?dvipdfmx):fatal: (.+)$/gm)) {
     const before = output.slice(0, m.index);
     const font = [...before.matchAll(/Could not locate a virtual\/physical font for TFM "([^"]+)"/g)].pop()?.[1];

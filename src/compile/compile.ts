@@ -55,7 +55,7 @@ sub ofree_makenomenclature {
 add_cus_dep('asy', 'eps', 0, 'ofree_asy');
 add_cus_dep('asy', 'pdf', 0, 'ofree_asy');
 add_cus_dep('asy', 'tex', 0, 'ofree_asy');
-sub ofree_asy { return system("asy -o \"$_[0]\" \"$_[0]\""); }
+sub ofree_asy { return system('asy', '-o', $_[0], $_[0]); }
 push @generated_exts, qw(glo gls glg acn acr alg slo sls slg glstex nlo nls nlg ist xdy);
 `;
 

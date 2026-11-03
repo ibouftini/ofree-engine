@@ -83,4 +83,11 @@ describe("diagnose", () => {
     expect(toolErrors("  makeindex main: Command for 'makeindex main' gave return code 1", 0)[0]).toMatchObject({ source: "makeindex", message: "makeindex main failed (exit code 1)" });
     expect(toolErrors("  makeindex main: Command for 'makeindex main' gave return code 1", 2)).toEqual([]);
   });
+
+  it("reports a .latexmkrc that does not compile", () => {
+    const output = ["Latexmk: Initialization file '/home/runner/repo/.latexmkrc' gave an error:", '     syntax error at (eval 9) line 29, near ""asy -o "$_"', "Latexmk: Stopping because of problem with rc file"].join("\n");
+    const [e] = toolErrors(output, 0);
+    expect(e).toMatchObject({ source: "latexmk", message: 'syntax error at (eval 9) line 29, near ""asy -o "$_"' });
+    expect(e.hint).toContain(".latexmkrc has a Perl error");
+  });
 });
