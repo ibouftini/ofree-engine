@@ -2,7 +2,7 @@
 
 import * as core from "@actions/core";
 import { ENGINE_NAME, type DocumentResult } from "./compile/compile.js";
-import type { Resolution } from "./plan/resolve.js";
+import { RENAMED_FONTS, type Resolution } from "./plan/resolve.js";
 
 export interface RunFacts {
   results: DocumentResult[];
@@ -61,6 +61,11 @@ export function summaryMarkdown(f: RunFacts): string {
     lines.push(`**${esc(r.doc.root)}** — a problem in the document:`);
     if (errors.length === 0) lines.push("- No error message was found; see the log of this step.");
     for (const p of errors) lines.push(`- ${p.file ? `\`${esc(p.file)}:${p.line}\` ` : ""}${esc(p.message)}`);
+    for (const m of r.findings.missing) {
+      const renamed = m.kind === "font" ? RENAMED_FONTS[m.name.toLowerCase()] : undefined;
+      if (renamed) lines.push(`- **Likely fix:** TeX Live now names the font "${esc(m.name)}" **"${renamed}"**. Use that name in your document.`);
+      else if (m.kind === "font") lines.push(`- The font "${esc(m.name)}" is not part of TeX Live. Add its files to the repository and list them in \`extra_fonts\`.`);
+    }
     lines.push("");
   }
   for (const r of ok) {

@@ -52,10 +52,18 @@ const FONT_ALIASES: Record<string, string> = {
   "tex gyre bonum math": "tex-gyre-math", "tex gyre schola math": "tex-gyre-math", "tex gyre dejavu math": "tex-gyre-math",
 };
 
+/** Families TeX Live ships under a new name; documents using the old one cannot find them. */
+export const RENAMED_FONTS: Record<string, string> = {
+  "source sans pro": "Source Sans 3",
+  "source serif pro": "Source Serif 4",
+};
+
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 /** The TeX Live package that ships a font, from its family name or file name. */
 export function fontPackage(db: Tlpdb, fileIndex: Map<string, string>, font: string): string | undefined {
+  const renamed = RENAMED_FONTS[font.toLowerCase()];
+  if (renamed) return fontPackage(db, fileIndex, renamed);
   const alias = FONT_ALIASES[font.toLowerCase()];
   if (alias && db.packages.has(alias)) return alias;
   const direct = fileIndex.get(font);
