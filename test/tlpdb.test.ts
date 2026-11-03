@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { fontPackage, resolvePackages } from "../src/plan/resolve.js";
+import { fontPackage, languagePackages, resolvePackages } from "../src/plan/resolve.js";
 import { planDocument } from "../src/plan/scan.js";
 import { buildFileIndex, closure, parseTlpdb } from "../src/tl/tlpdb.js";
 
@@ -71,6 +71,12 @@ describe.skipIf(!real || !existsSync(real))("real texlive.tlpdb", () => {
     expect(fontPackage(db, index, "Amiri")).toBe("amiri");
     expect(fontPackage(db, index, "Libertinus Serif")).toBe("libertinus-fonts");
     expect(fontPackage(db, index, "TeX Gyre Pagella")).toBe("tex-gyre");
+  });
+
+  it("finds babel languages whose files carry a suffix", () => {
+    expect(languagePackages(db, index, "russian")).toEqual(["babel-russian", "hyphen-russian"]);
+    expect(languagePackages(db, index, "ukrainian")).toContain("babel-ukrainian");
+    expect(languagePackages(db, index, "french")).toEqual(["babel-french", "hyphen-french"]);
   });
 
   it("resolves the fixture thesis without leftovers", () => {

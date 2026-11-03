@@ -82,7 +82,13 @@ export function fontPackage(db: Tlpdb, fileIndex: Map<string, string>, font: str
 /** Packages for a babel/polyglossia language: its definition file and its hyphenation patterns. */
 export function languagePackages(db: Tlpdb, fileIndex: Map<string, string>, lang: string): string[] {
   const out: string[] = [];
-  const ldf = fileIndex.get(`${lang}.ldf`) ?? fileIndex.get(`gloss-${lang}.ldf`);
+  // Some babel languages use a "b" suffix (russianb.ldf, ukraineb.ldf).
+  // polyglossia documents load polyglossia.sty, which ships every gloss-*.ldf,
+  // so babel's own package comes first.
+  const ldf =
+    [`${lang}.ldf`, `${lang}b.ldf`].map((f) => fileIndex.get(f)).find(Boolean) ??
+    (db.packages.has(`babel-${lang}`) ? `babel-${lang}` : undefined) ??
+    fileIndex.get(`gloss-${lang}.ldf`);
   if (ldf) out.push(ldf);
   const alias = HYPHEN_ALIASES[lang] ?? lang;
   if (alias && db.packages.has(`hyphen-${alias}`)) out.push(`hyphen-${alias}`);
