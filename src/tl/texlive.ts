@@ -230,6 +230,32 @@ export class TexLive {
     });
   }
 
+  /**
+   * Brings the installed packages up to the repository's revisions. A cached
+   * installation keeps its packages as they were; a package added to it later
+   * may expect newer ones ("LaTeX kernel too old"). Returns what it updated.
+   */
+  updateInstalled(): Promise<string[]> {
+    return this.mutex.lock(async () => {
+      const { db } = await this.database();
+      const localDb = join(this.texdir, "tlpkg", "texlive.tlpdb");
+      if (!existsSync(localDb)) return [];
+      const local = parseTlpdb(readFileSync(localDb, "utf8"));
+      // tlmgr itself is left alone: updating it needs "update --self".
+      const outdated = [...this.installed].filter(
+        (n) => !n.startsWith("texlive.infra") && (db.packages.get(n)?.revision ?? 0) > (local.packages.get(n)?.revision ?? Infinity),
+      );
+      if (outdated.length === 0) return [];
+      await this.prefetch(outdated);
+      const r = await run(join(this.bin, "tlmgr"), ["--repository", this.repo, "update", ...outdated], { env: this.env() });
+      if (r.code !== 0) throw new Error(`tlmgr could not update ${outdated.length} packages:\n${tail(r.output)}`);
+      this.changed = true;
+      this.formatsDirty = true;
+      this.mapsDirty = true;
+      return outdated;
+    });
+  }
+
   /** Sets the current installation aside so a fresh one can be installed. */
   private discard() {
     renameSync(this.texdir, `${this.texdir}.old-${Date.now()}`);

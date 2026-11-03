@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { fontPackage, languagePackages, resolvePackages } from "../src/plan/resolve.js";
+import { fingerprint, fontPackage, languagePackages, lineage, resolvePackages } from "../src/plan/resolve.js";
 import { planDocument } from "../src/plan/scan.js";
 import { buildFileIndex, closure, parseTlpdb } from "../src/tl/tlpdb.js";
 
@@ -35,6 +35,14 @@ category Package
 runfiles size=1
  RELOC/tex/latex/bar/bar.sty
 `;
+
+describe("cache keys", () => {
+  it("names a project by where its documents are, not by what they need", () => {
+    expect(lineage("docs", ["main.tex", "slides.tex"])).toBe(lineage("docs", ["slides.tex", "main.tex"]));
+    expect(lineage("docs", ["main.tex"])).not.toBe(lineage("paper", ["main.tex"]));
+    expect(fingerprint(["file:a.sty"])).not.toBe(fingerprint(["file:b.sty"]));
+  });
+});
 
 describe("parseTlpdb (inline sample)", () => {
   const db = parseTlpdb(SAMPLE);

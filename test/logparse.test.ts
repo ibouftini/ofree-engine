@@ -114,6 +114,13 @@ describe("parseLog", () => {
     expect(f.missing).toContainEqual({ kind: "program", name: "gs" });
   });
 
+  it("asks for an update when a package expects newer installed ones", () => {
+    expect(parseLog("! LaTeX Error: Mismatched LaTeX support files detected.").needsUpdate).toBe(true);
+    expect(parseLog("LaTeX Warning: You have requested release `2025-11-01' of LaTeX,\n               but only release `2024-06-01' is available.").needsUpdate).toBe(true);
+    expect(parseLog("! Package expl3 Error: Support package l3kernel too old.").needsUpdate).toBe(true);
+    expect(parseLog("! Undefined control sequence.").needsUpdate).toBe(false);
+  });
+
   it("asks for shell escape when minted says so", () => {
     expect(parseLog("Package minted Error: You must invoke LaTeX with the -shell-escape flag.").needsShellEscape).toBe(true);
   });

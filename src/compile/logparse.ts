@@ -13,6 +13,8 @@ export interface LogFindings {
   /** The document needs a Unicode engine: one of them in particular, or "either". */
   needsUnicodeEngine: "either" | "xelatex" | "lualatex" | null;
   needsShellEscape: boolean;
+  /** The installed packages are older than one that was added later ("LaTeX kernel too old"). */
+  needsUpdate: boolean;
   pages: number | null;
   /** Last "Output written on X" path (may be in an -outdir), relative to the compile directory. */
   outputFile: string | null;
@@ -97,6 +99,8 @@ export function parseLog(raw: string): LogFindings {
   else if (only("Xe(?:La)?TeX").test(errorText)) needsUnicodeEngine = "xelatex";
 
   const needsShellEscape = /-shell-escape|shell escape is disabled|--enable-write18|You must invoke LaTeX with/i.test(output);
+  const needsUpdate =
+    /Mismatched LaTeX support files detected|(?:l3kernel|LaTeX kernel|expl3|LaTeX format)\S*\s+(?:is\s+)?too\s+old|You have requested release [`'‘][^'’]+['’] of LaTeX,\s+but only release|requires a newer (?:version of (?:the )?)?(?:LaTeX|l3kernel|expl3)/i.test(output);
 
   const pageMatches = [...output.matchAll(/Output written on [^(]+\((\d+) pages?/g)];
   const pages = pageMatches.length ? Number(pageMatches[pageMatches.length - 1][1]) : null;
@@ -109,6 +113,7 @@ export function parseLog(raw: string): LogFindings {
     missing: uniq(missing, (m) => `${m.kind}|${m.name}`),
     needsUnicodeEngine,
     needsShellEscape,
+    needsUpdate,
     pages,
   };
 }

@@ -77,6 +77,8 @@ export interface Recovery {
   installMissing(missing: Missing[]): Promise<string[]>;
   /** Makes an engine usable (binaries and format). */
   ensureEngine(engine: Engine): Promise<void>;
+  /** Updates the installed packages to the repository's revisions; returns what it updated. */
+  update(): Promise<string[]>;
 }
 
 export interface DocumentResult {
@@ -207,6 +209,7 @@ export async function compileDocument(
   let force = false;
   let retriedAfterFonts = false;
   let keepGoing = false;
+  let updated = false;
   const triedEngines = new Set<Engine>([engine]);
   let last!: Awaited<ReturnType<typeof attempt>>;
   let findings!: LogFindings;
@@ -230,6 +233,15 @@ export async function compileDocument(
       if (got.length > 0) {
         installed.push(...got);
         notes.push(`Installed ${got.join(", ")}, found missing while compiling`);
+        force = true;
+        continue;
+      }
+    }
+    if (findings.needsUpdate && !updated) {
+      updated = true;
+      const got = await recovery.update();
+      if (got.length > 0) {
+        notes.push(`Updated ${got.length} cached packages: a package added later expected newer ones`);
         force = true;
         continue;
       }

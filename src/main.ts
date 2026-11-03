@@ -9,7 +9,7 @@ import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
 import { compileAll, EXTRA_LATEXMKRC, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
-import { fingerprint, fontPackage, languagePackages, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
+import { fingerprint, fontPackage, languagePackages, lineage, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { Fonts, providable, type FontOutcome } from "./fonts.js";
 import { annotate, digestText, summaryMarkdown } from "./report.js";
@@ -197,7 +197,8 @@ async function main() {
   const texdir = process.env.OFREE_TEXDIR ?? join(homedir(), ".ofree", "texlive");
   const work = join(process.env.RUNNER_TEMP ?? tmpdir(), "ofree");
   const useCache = core.getInput("cache") !== "false" && cacheAvailable();
-  const restored = useCache ? await restoreTexLive(texdir, arch, fp) : { exact: false, key: undefined };
+  const line = lineage(prefix || ".", docs.map((d) => d.root));
+  const restored = useCache ? await restoreTexLive(texdir, arch, line, fp) : { exact: false, key: undefined };
   const tl = new TexLive(texdir, arch, work, year);
   tl.log = (m) => core.info(m);
   core.info(`Cache: ${restored.key ? `${restored.exact ? "exact" : "partial"} match ${restored.key}` : "no entry"} (${seconds(t)} s)`);
@@ -217,6 +218,8 @@ async function main() {
     provisionedFrom = restored.key
       ? "restored from the cache, then completed"
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
+    // Save under this fingerprint even if nothing was added, so the next run is an exact match.
+    if (restored.key) tl.changed = true;
   }
   let s = performance.now();
   await tl.ensureFormats(docs.map((d) => d.engine));
@@ -238,6 +241,16 @@ async function main() {
   phases.provision = seconds(t);
 
   await ghostscript;
+
+  // keep_warm: a scheduled run that only keeps the cached TeX Live alive.
+  // GitHub drops cache entries unused for 7 days; restoring one counts as use.
+  if (bool("keep_warm")) {
+    if (useCache && tl.changed) await saveTexLive(texdir, arch, line, fp);
+    const what = restored.exact ? "restored (its 7-day expiry starts again)" : "prepared and saved";
+    core.info(`keep_warm: the cached TeX Live was ${what}; nothing was compiled.`);
+    if (process.env.GITHUB_STEP_SUMMARY) await core.summary.addRaw(`## ♨️ TeX Live kept warm\n\nThe cached TeX Live was ${what} in ${phases.provision.toFixed(1)} s. Nothing was compiled.\n`).write();
+    return;
+  }
 
   // 3. Optional user setup (compatibility inputs).
   t = performance.now();
@@ -293,6 +306,14 @@ async function main() {
       installed.push(...(await completeDependencies(tl, arch, [...installed, ...direct])));
       await tl.ensureFormats(docs.map((d) => d.engine));
       return installed;
+    },
+    update: async () => {
+      const got = await tl.updateInstalled();
+      if (got.length) {
+        core.info(`Updated ${got.length} packages of the cached TeX Live: ${got.slice(0, 20).join(", ")}${got.length > 20 ? ", …" : ""}`);
+        await tl.ensureFormats(docs.map((d) => d.engine));
+      }
+      return got;
     },
     ensureEngine: async (engine: Engine) => {
       if (engine === "xelatex") {
@@ -371,7 +392,7 @@ async function main() {
   }
   if (useCache && tl.changed) {
     t = performance.now();
-    const key = await saveTexLive(texdir, arch, fp);
+    const key = await saveTexLive(texdir, arch, line, fp);
     if (key) core.info(`Saved TeX Live to the cache as ${key} in ${seconds(t)} s`);
   }
 

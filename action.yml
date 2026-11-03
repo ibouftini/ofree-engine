@@ -58,6 +58,9 @@ inputs:
   cache:
     description: Reuse TeX Live across runs through the Actions cache.
     default: "true"
+  keep_warm:
+    description: Only restore (or prepare) and save the cached TeX Live, without compiling. For a weekly scheduled run, as GitHub drops cache entries unused for 7 days.
+    default: "false"
   upload:
     description: Upload the PDFs as a workflow artifact.
     default: "true"

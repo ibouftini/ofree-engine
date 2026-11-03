@@ -6,7 +6,7 @@ import { closure, type Tlpdb } from "../tl/tlpdb.js";
 import type { DocumentPlan, Ref } from "./scan.js";
 
 /** Bump when the layout of a cached TeX Live changes incompatibly. */
-export const LAYOUT_VERSION = "2";
+export const LAYOUT_VERSION = "3";
 
 /** Packages every build gets, whatever the document. */
 const BASE = ["scheme-basic", "latexmk"];
@@ -28,6 +28,11 @@ export function requirementTokens(docs: DocumentPlan[], extraPackages: string[] 
   }
   for (const p of extraPackages) tokens.add(`pkg:${p}`);
   return [...tokens].sort();
+}
+
+/** Names one project's documents (where they are, not what they need), so its cache entries form one line. */
+export function lineage(workingDirectory: string, roots: string[]): string {
+  return createHash("sha256").update([workingDirectory, ...[...roots].sort()].join("\n")).digest("hex").slice(0, 10);
 }
 
 export function fingerprint(tokens: string[]): string {

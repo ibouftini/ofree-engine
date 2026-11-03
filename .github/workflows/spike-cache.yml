@@ -40,3 +40,42 @@ jobs:
             find . -type f -printf '%s %p\n' | sort -rn | head -20 | numfmt --to=iec --field=1
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  keep-warm:
+    name: keep_warm · paper
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/paper
+          keep_warm: true
+      - name: Nothing was compiled
+        run: test ! -e bench/samples/paper/main.pdf
+
+  update:
+    name: update · outdated cached packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/paper
+          cache: false
+          upload: false
+      - name: Make one installed package look outdated
+        run: |
+          db=~/.ofree/texlive/tlpkg/texlive.tlpdb
+          perl -0pi -e 's/(\nname booktabs\n(?:[^\n]+\n)*?revision )\d+/${1}1/' "$db"
+          grep -A3 "^name booktabs$" "$db" | grep revision
+      - name: A document that asks for a newer LaTeX, with an error
+        run: |
+          mkdir -p /tmp/upd && cd /tmp/upd
+          printf '%s\n' '\NeedsTeXFormat{LaTeX2e}[2099-01-01]' '\documentclass{article}' '\usepackage{booktabs}' '\begin{document}' '\undefinedcommand' '\end{document}' > main.tex
+          cp -r /tmp/upd "$GITHUB_WORKSPACE/upd"
+      - uses: ./
+        with:
+          working_directory: upd
+          cache: false
+          upload: false
+          on_error: warn

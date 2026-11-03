@@ -27,6 +27,26 @@ Nothing else is needed. The action:
 - **Explains what to fix:** the summary lists each real error once, at its file and line, with the command or text where TeX stopped and a plain-language hint. Errors that only follow from an earlier one are left out, and undefined references, citations and characters a font lacks are grouped.
 - **Uploads the PDFs as an artifact,** also when they have errors.
 
+### Keeping the cache warm
+
+GitHub deletes cache entries that have not been used for 7 days, so a document built less than once a week starts without its TeX Live (a first run takes 20–40 s instead of about 10 s). A weekly scheduled run that only restores the cache prevents that:
+
+```yaml
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # every Monday
+jobs:
+  keep-warm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ibouftini/ofree-engine@main
+        with:
+          keep_warm: true
+```
+
+It takes a few seconds (one billed minute a week on a private repository). Each project's cache entries are kept apart, so they stay the size of what its documents need.
+
 ### Coming from `xu-cheng/latex-action`
 
 Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_use_xelatex`, `args`, `extra_system_packages`, `pre_compile`, …) are accepted as they are. `docker_image` and `os` are ignored, because no Docker image is used.
@@ -40,6 +60,7 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 | `shell_escape` | `auto` | `auto` enables it only for documents that need it (minted, svg, …); `always`; `never` |
 | `extra_packages` | | TeX Live packages to add to the ones found automatically |
 | `cache` | `true` | Reuse TeX Live across runs |
+| `keep_warm` | `false` | Only keep the cached TeX Live alive, without compiling (see below) |
 | `upload` | `true` | Upload the PDFs as a workflow artifact |
 | `artifact_name` | `pdf` | Name of that artifact |
 
