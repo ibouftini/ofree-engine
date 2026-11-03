@@ -4,6 +4,7 @@ import * as core from "@actions/core";
 import { posix } from "node:path";
 import { ENGINE_NAME, type DocumentResult } from "./compile/compile.js";
 import type { Issue } from "./compile/diagnose.js";
+import type { FontOutcome } from "./fonts.js";
 import type { Resolution } from "./plan/resolve.js";
 
 export interface RunFacts {
@@ -19,6 +20,8 @@ export interface RunFacts {
   mirror?: string;
   resolution?: Resolution;
   artifactUrl?: string;
+  /** Fonts that are not in TeX Live, and where they came from. */
+  fonts?: FontOutcome[];
 }
 
 const esc = (s: string) => s.replace(/\|/g, "\\|").replace(/</g, "&lt;");
@@ -131,6 +134,10 @@ export function summaryMarkdown(f: RunFacts): string {
     lines.push(`| \`${esc(r.doc.root)}\` | ${engine} | ${r.pages ?? "—"} | ${result} | ${r.seconds.toFixed(1)} s |`);
   }
   lines.push("");
+  const substituted = (f.fonts ?? []).filter((x) => x.source === "substitute");
+  for (const x of substituted) {
+    lines.push(`> [!WARNING]`, `> **${esc(x.name)}** cannot be downloaded, so **${esc(x.family ?? "")}** is used instead. It has the same character widths, so lines and pages break the same way, but the letters look slightly different. To use ${esc(x.name)} itself, add its font files to the repository.`, "");
+  }
   for (const r of f.results) lines.push(...documentSection(r, f.prefix));
 
   lines.push("<details><summary>How this was built</summary>", "");
@@ -147,7 +154,17 @@ export function summaryMarkdown(f: RunFacts): string {
     ].filter(Boolean);
     lines.push(`- \`${esc(r.doc.root)}\`: ${extra.join("; ") || "nothing special"}.`);
   }
-  const unresolved = f.resolution?.unresolved ?? [];
+  const SOURCE: Record<FontOutcome["source"], string> = {
+    repository: "from the repository",
+    google: "downloaded from Google Fonts",
+    microsoft: "downloaded from Microsoft (core fonts for the web, under Microsoft's licence)",
+    substitute: "replaced by a metric-compatible font",
+    missing: "not found anywhere",
+  };
+  const fontsUsed = (f.fonts ?? []).map((x) => `${esc(x.name)} (${SOURCE[x.source]}${x.family ? `: ${esc(x.family)}` : ""})`);
+  if (fontsUsed.length) lines.push(`- Fonts not in TeX Live: ${fontsUsed.join(", ")}.`);
+  const provided = new Set((f.fonts ?? []).filter((x) => x.source !== "missing").map((x) => `font "${x.name}"`));
+  const unresolved = (f.resolution?.unresolved ?? []).filter((u) => !provided.has(u.what));
   if (unresolved.length) {
     lines.push(`- Not found in TeX Live (local files elsewhere, or fonts from the system): ${unresolved.slice(0, 15).map((u) => `${esc(u.what)} (${u.ref.file}:${u.ref.line})`).join(", ")}.`);
   }

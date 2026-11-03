@@ -2,15 +2,16 @@
 
 import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
-import { copyFileSync, existsSync, globSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, globSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, homedir, tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { cacheAvailable, restoreTexLive, saveTexLive } from "./cache.js";
 import { compileAll, EXTRA_LATEXMKRC, type CompileOptions } from "./compile/compile.js";
 import type { Missing } from "./compile/logparse.js";
 import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, languagePackages, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
+import { Fonts, providable, type FontOutcome } from "./fonts.js";
 import { annotate, digestText, summaryMarkdown } from "./report.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
 import { closure } from "./tl/tlpdb.js";
@@ -206,7 +207,20 @@ async function main() {
   }
   let s = performance.now();
   await tl.ensureFormats(docs.map((d) => d.engine));
+  // Fonts outside TeX Live: the repository's own, then downloads (see fonts.ts).
+  const fonts = new Fonts(texdir, join(homedir(), ".ofree", "repository-fonts"), work, () => tl.env(), (m) => core.info(m));
+  tl.extraFontDirs = [fonts.repositoryDir];
   await tl.ensureFontconfig();
+  const extraFonts = list("extra_fonts").flatMap((p) => globSync(p, { cwd: workspace }).map((f) => join(workspace, f)));
+  const registered = await fonts.registerRepository(workspace, extraFonts);
+  if (registered) core.info(`Registered ${registered} font file(s) from the repository`);
+  const microsoftFonts = core.getInput("microsoft_fonts") !== "false";
+  const named = [...new Set(docs.flatMap((d) => [...d.fonts.keys()]))].filter(providable);
+  const fontOutcomes: FontOutcome[] = await fonts.provide(named, microsoftFonts);
+  for (const f of fontOutcomes.filter((f) => f.source === "substitute")) {
+    core.warning(`"${f.name}" cannot be downloaded, so ${f.family} is used instead: it has the same character widths, so lines and pages break the same way, but the letters look slightly different. To use ${f.name} itself, add its font files to the repository.`, { title: `Font ${f.name} replaced by ${f.family}` });
+  }
+  if (fonts.changed) tl.changed = true;
   core.info(`Formats and fonts ready in ${seconds(s)} s`);
   phases.provision = seconds(t);
 
@@ -214,13 +228,6 @@ async function main() {
   t = performance.now();
   const sysPkgs = core.getInput("extra_system_packages").split(/\s+/).filter(Boolean).map(debianName);
   if (sysPkgs.length) await installSystemPackages(sysPkgs);
-  const fonts = list("extra_fonts");
-  if (fonts.length) {
-    const fontDir = join(homedir(), ".local", "share", "fonts");
-    mkdirSync(fontDir, { recursive: true });
-    for (const pattern of fonts) for (const f of globSync(pattern, { cwd: workspace })) copyFileSync(join(workspace, f), join(fontDir, basename(f)));
-    await run("fc-cache", ["-f", fontDir]);
-  }
   await shell(core.getInput("pre_compile"), workspace, tl.env(), "pre_compile");
   phases.setup = seconds(t);
 
@@ -232,6 +239,7 @@ async function main() {
       const { db, index } = await tl.database();
       direct ??= [...resolvePackages(db, index, arch, docs, extraPackages).reasons.keys()];
       const roots = new Set<string>();
+      const provided: string[] = [];
       for (const m of missing) {
         if (m.kind === "language") {
           const pkgs = languagePackages(db, index, m.name).filter((p) => !tl.installedPackages().has(p));
@@ -245,6 +253,14 @@ async function main() {
         const state = !pkg ? "no TeX Live package provides it" : tl.installedPackages().has(pkg) ? `${pkg}, already installed` : pkg;
         core.info(`Missing ${m.kind} ${m.name}: ${state}`);
         if (pkg && !tl.installedPackages().has(pkg)) roots.add(pkg);
+        if (!pkg && m.kind === "font" && providable(m.name)) {
+          const [outcome] = await fonts.provide([m.name], microsoftFonts);
+          if (outcome && outcome.source !== "missing" && !fontOutcomes.some((f) => f.name === m.name)) {
+            fontOutcomes.push(outcome);
+            provided.push(`font ${m.name}`);
+            if (fonts.changed) tl.changed = true;
+          }
+        }
         const fontName = m.name.replace(/\.tfm$/, "");
         if (!pkg && m.kind === "file" && (m.name.endsWith(".tfm") || /^[a-z]+\d{3,4}$/.test(fontName))) {
           const kit = metafontKit(fontName).filter((p) => !tl.installedPackages().has(p));
@@ -252,7 +268,7 @@ async function main() {
           for (const p of kit) roots.add(p);
         }
       }
-      if (roots.size === 0) return [];
+      if (roots.size === 0) return provided;
       const installed = await tl.install(closure(db, arch, roots));
       installed.push(...(await completeDependencies(tl, arch, [...installed, ...direct])));
       await tl.ensureFormats(docs.map((d) => d.engine));
@@ -328,6 +344,7 @@ async function main() {
           mirror: tl.mirror,
           resolution,
           artifactUrl,
+          fonts: fontOutcomes,
         }),
       )
       .write();

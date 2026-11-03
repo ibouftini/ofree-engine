@@ -30,6 +30,8 @@ export class TexLive {
   readonly stats = { packagesDownloaded: 0, bytesDownloaded: 0, coldInstall: false };
   /** Progress messages (the action passes core.info). */
   log: (message: string) => void = () => undefined;
+  /** Font folders outside TeX Live (the repository's fonts), for fontconfig and LuaTeX. */
+  extraFontDirs: string[] = [];
 
   private installed = new Set<string>();
   private db?: Tlpdb;
@@ -81,6 +83,8 @@ export class TexLive {
       error_line: "254",
       half_error_line: "238",
     };
+    // LuaTeX (luaotfload) and kpathsea look for fonts outside TeX Live in OSFONTDIR.
+    if (this.extraFontDirs.length) env.OSFONTDIR = [...this.extraFontDirs, process.env.OSFONTDIR].filter(Boolean).join(delimiter);
     if (existsSync(this.fontconfigFile())) env.FONTCONFIG_FILE = this.fontconfigFile();
     return env;
   }
@@ -106,7 +110,7 @@ export class TexLive {
         `<fontconfig>`,
         `  <cachedir>${cacheDir}</cachedir>`,
         `  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>`,
-        ...dirs.map((d) => `  <dir>${d}</dir>`),
+        ...[...dirs, ...this.extraFontDirs].map((d) => `  <dir>${d}</dir>`),
         `</fontconfig>`,
         ``,
       ].join("\n"),

@@ -35,7 +35,10 @@ inputs:
   extra_system_packages:
     description: System (apt) packages to install.
   extra_fonts:
-    description: Font files or globs to make available to fontconfig.
+    description: Font files or globs outside the repository's own (whose font files are found automatically).
+  microsoft_fonts:
+    description: Download Microsoft's core fonts (Arial, Times New Roman, Courier New, Georgia, Verdana, ...) from Microsoft when a document uses one, accepting Microsoft's licence for them. false uses metric-compatible free fonts instead.
+    default: "true"
   pre_compile:
     description: Bash commands to run before compiling.
   post_compile:

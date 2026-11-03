@@ -1,0 +1,24 @@
+% !TeX program = lualatex
+% Fonts that are not in TeX Live, as thesis templates and Overleaf projects
+% use them: Times New Roman (Microsoft's core fonts), Calibri (no free
+% download: a metric-compatible font stands in), Noto Nastaliq Urdu (Google
+% Fonts), and Lobster from the repository's fonts/ folder.
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{urdu}
+\setmainfont{Times New Roman}
+\setsansfont{Calibri}
+\newfontfamily\urdufont[Script=Arabic]{Noto Nastaliq Urdu}
+\newfontfamily\display{Lobster}
+\begin{document}
+\section{Times New Roman}
+Body text in Times New Roman, \textbf{bold}, \textit{italic} and \textbf{\textit{bold italic}}.
+
+{\sffamily Calibri, as required by many university templates: \textbf{bold} and \textit{italic}.}
+
+Urdu in Nastaliq: \texturdu{یہ اردو متن ہے۔}
+
+{\display\Large A display font from the repository}
+\end{document}

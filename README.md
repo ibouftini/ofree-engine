@@ -21,6 +21,7 @@ Nothing else is needed. The action:
 - **Finds the documents itself:** every `.tex` file with `\documentclass` that no other file includes.
 - **Picks the engine** (pdfLaTeX, XeLaTeX or LuaLaTeX) from `% !TeX program`, `.latexmkrc` or the packages used, and says why.
 - **Installs only what the documents need:** the TeX Live packages, languages and fonts it reads from the sources. Anything still missing while compiling is installed and the document retried.
+- **Finds fonts that are not in TeX Live:** font files in the repository are used as they are, by name. Other fonts are downloaded from Google Fonts, and Microsoft's core fonts (Arial, Times New Roman, Courier New, Georgia, Verdana, …) from Microsoft, under Microsoft's licence for them. Calibri and Cambria cannot be downloaded: Carlito and Caladea, which have the same character widths (so the same line and page breaks), stand in for them, with a warning.
 - **Keeps that TeX Live in the Actions cache,** so later runs start in seconds.
 - **Builds through LaTeX errors,** as Overleaf does: an undefined command or a missing figure still gives a PDF (with `??` where references are missing).
 - **Explains what to fix:** the summary lists each real error once, at its file and line, with the command or text where TeX stopped and a plain-language hint. Errors that only follow from an earlier one are left out, and undefined references, citations and characters a font lacks are grouped.
@@ -35,6 +36,7 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 | Input | Default | Meaning |
 |---|---|---|
 | `on_error` | `fail` | With `fail`, LaTeX errors fail the step (the PDF is still uploaded); with `warn`, the step passes when a PDF was built |
+| `microsoft_fonts` | `true` | Download Microsoft's core fonts when a document uses one; `false` uses metric-compatible free fonts (Tinos for Times New Roman, Arimo for Arial, …) |
 | `shell_escape` | `auto` | `auto` enables it only for documents that need it (minted, svg, …); `always`; `never` |
 | `extra_packages` | | TeX Live packages to add to the ones found automatically |
 | `cache` | `true` | Reuse TeX Live across runs |

@@ -329,7 +329,8 @@ function scanText(
   }
   const fontRes = [
     /\\set(?:CJK)?(?:main|sans|mono|math)font\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
-    /\\newfont(?:family|face)\s*\{?\\[A-Za-z@]+\}?\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
+    /\\(?:new|renew|provide|set)font(?:family|face)\s*\{?\\[A-Za-z@]+\}?\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
+    /\\fontspec\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
     /\\babelfont\s*(?:\[[^\]]*\])?\s*\{[^}]+\}\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
   ];
   for (const re of fontRes) {
