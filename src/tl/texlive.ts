@@ -73,6 +73,11 @@ export class TexLive {
       PATH: `${this.bin}${delimiter}${process.env.PATH ?? ""}`,
       // Biber unpacks itself on first run; keep that inside the cached tree.
       PAR_GLOBAL_TEMP: join(this.texdir, ".ofree", "par"),
+      // TeX wraps log lines at 79 characters, splitting file names in error
+      // messages; unwrapped logs make every message readable.
+      max_print_line: "10000",
+      error_line: "254",
+      half_error_line: "238",
     };
     if (existsSync(this.fontconfigFile())) env.FONTCONFIG_FILE = this.fontconfigFile();
     return env;
