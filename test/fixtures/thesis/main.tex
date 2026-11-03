@@ -1,0 +1,16 @@
+\documentclass[12pt,french]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{babel}
+\usepackage{graphicx,subfiles}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning,
+  calc}
+\usepackage{pgfplots}
+\usepgfplotslibrary{fillbetween}
+% \usepackage{notloaded}
+\bibliographystyle{abbrvnat}
+\begin{document}
+\input{chapters/intro}
+\subfile{chapters/results}
+\bibliography{refs}
+\end{document}

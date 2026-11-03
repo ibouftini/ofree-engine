@@ -1,0 +1,70 @@
+name: ofree LaTeX
+description: Compile LaTeX documents with no configuration. Installs only what the documents need and reuses it across runs.
+author: ibouftini
+branding:
+  icon: book-open
+  color: blue
+
+inputs:
+  root_file:
+    description: Root LaTeX file(s), one per line; globs allowed. Default - every .tex file with \documentclass that no other file includes.
+  working_directory:
+    description: Directory to work in, relative to the repository.
+  work_in_root_file_dir:
+    description: With root_file, compile each document from its own directory.
+    default: "false"
+  compiler:
+    description: Build program. latexmk is the only one with automatic recovery.
+    default: latexmk
+  args:
+    description: Arguments for the build program. Default - -interaction=nonstopmode -file-line-error -halt-on-error.
+  latexmk_use_xelatex:
+    description: Force XeLaTeX for every document.
+    default: "false"
+  latexmk_use_lualatex:
+    description: Force LuaLaTeX for every document.
+    default: "false"
+  latexmk_shell_escape:
+    description: Always enable shell escape.
+    default: "false"
+  shell_escape:
+    description: auto (enable only when a document needs it), always, or never.
+    default: auto
+  extra_packages:
+    description: TeX Live packages to install in addition to the ones found automatically.
+  extra_system_packages:
+    description: System (apt) packages to install.
+  extra_fonts:
+    description: Font files or globs to make available to fontconfig.
+  pre_compile:
+    description: Bash commands to run before compiling.
+  post_compile:
+    description: Bash commands to run after compiling.
+  continue_on_error:
+    description: Accepted for compatibility. Every document is always built; the step fails if any fails.
+    default: "false"
+  texlive_version:
+    description: Accepted for compatibility; the current TeX Live is used.
+  os:
+    description: Ignored (no Docker image is used).
+  docker_image:
+    description: Ignored (no Docker image is used).
+  cache:
+    description: Reuse TeX Live across runs through the Actions cache.
+    default: "true"
+  upload:
+    description: Upload the PDFs as a workflow artifact.
+    default: "true"
+  artifact_name:
+    description: Name of the uploaded artifact.
+    default: pdf
+
+outputs:
+  pdf:
+    description: Paths of the produced PDFs, one per line.
+  status:
+    description: success or failure.
+
+runs:
+  using: node24
+  main: dist/index.js

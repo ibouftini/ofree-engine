@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - name: Fetch the TeX Live package database for the real-data tests
+        run: |
+          curl -sSfL --retry 3 -o "$RUNNER_TEMP/texlive.tlpdb.xz" https://mirrors.mit.edu/CTAN/systems/texlive/tlnet/tlpkg/texlive.tlpdb.xz
+          xz -d "$RUNNER_TEMP/texlive.tlpdb.xz"
+          echo "TLPDB=$RUNNER_TEMP/texlive.tlpdb" >> "$GITHUB_ENV"
+      - run: pnpm test
+      - name: The committed bundle matches the sources
+        run: |
+          pnpm run build
+          git diff --exit-code --stat dist/ || { echo "::error::dist/ is out of date: run 'pnpm run build' and commit."; exit 1; }

@@ -1,0 +1,11 @@
+% !TeX program = lualatex
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Unicode math: $∀ x ∈ ℝ,\ x^2 ≥ 0$, cited from \cite{knuth1984}.
+\printbibliography
+\end{document}

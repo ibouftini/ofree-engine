@@ -1,0 +1,86 @@
+name: Benchmark · samples
+
+# Each sample is built three ways on identical runners:
+#   incumbent  xu-cheng/latex-action@v4
+#   cold       this action with the cache disabled (every run is a first run)
+#   cached     this action with the cache (first dispatch seeds, later ones are warm)
+# The last job collects job durations from the API.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["dist/**", "action.yml", "bench/**", ".github/workflows/bench.yml"]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ours:
+    name: ours-${{ matrix.cache && 'cached' || 'cold' }} · ${{ matrix.doc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        doc: [paper, arabic, lua, cv]
+        cache: [true, false]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          working_directory: bench/samples/${{ matrix.doc }}
+          cache: ${{ matrix.cache }}
+          artifact_name: pdf-${{ matrix.doc }}-${{ matrix.cache }}
+
+  incumbent:
+    name: incumbent · ${{ matrix.doc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { doc: paper, xelatex: false, lualatex: false }
+          - { doc: arabic, xelatex: true, lualatex: false }
+          - { doc: lua, xelatex: false, lualatex: true }
+          - { doc: cv, xelatex: true, lualatex: false }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: xu-cheng/latex-action@v4
+        with:
+          root_file: main.tex
+          working_directory: bench/samples/${{ matrix.doc }}
+          latexmk_use_xelatex: ${{ matrix.xelatex }}
+          latexmk_use_lualatex: ${{ matrix.lualatex }}
+
+  results:
+    needs: [ours, incumbent]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Job durations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" > jobs.json
+          python3 - >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          import json, datetime as dt
+          jobs = json.load(open("jobs.json"))["jobs"]
+          ts = lambda s: dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
+          rows = {}
+          for j in jobs:
+              if " · " not in j["name"] or not j.get("completed_at"):
+                  continue
+              variant, doc = j["name"].split(" · ")
+              rows.setdefault(doc, {})[variant] = (round((ts(j["completed_at"]) - ts(j["started_at"])).total_seconds()), j["conclusion"])
+          variants = ["incumbent", "ours-cold", "ours-cached"]
+          print("## Job duration (s) per sample\n")
+          print("| Sample | " + " | ".join(variants) + " |")
+          print("|---|" + "---:|" * len(variants))
+          for doc in sorted(rows):
+              cells = []
+              for v in variants:
+                  s, c = rows[doc].get(v, (None, None))
+                  cells.append("—" if s is None else f"{s}" + ("" if c == "success" else f" ({c})"))
+              print(f"| {doc} | " + " | ".join(cells) + " |")
+          EOF
