@@ -5,7 +5,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import type { Engine } from "../plan/scan.js";
-import { Mutex, run } from "../util/exec.js";
+import { Mutex, run, seconds } from "../util/exec.js";
 import { downloadAll, fetchBytes, rankMirrors, sha512, tlnetCandidates, tlpdbRevision } from "./net.js";
 import { buildFileIndex, closure, parseTlpdb, type Tlpdb } from "./tlpdb.js";
 
@@ -28,6 +28,8 @@ export class TexLive {
   /** True once this run installed anything (the cache must then be saved). */
   changed = false;
   readonly stats = { packagesDownloaded: 0, bytesDownloaded: 0, coldInstall: false };
+  /** Progress messages (the action passes core.info). */
+  log: (message: string) => void = () => undefined;
 
   private installed = new Set<string>();
   private db?: Tlpdb;
@@ -142,26 +144,38 @@ export class TexLive {
     // Mirrors lag behind each other by a day or more, and tlmgr refuses a
     // repository older than the installation. Read the database of the few
     // fastest mirrors and use the newest one.
-    const fetched = await Promise.allSettled(
-      ranked.map(async (tlnet, i) => {
-        const dir = join(this.work, "tlpdb", String(i));
-        mkdirSync(dir, { recursive: true });
-        const [xz, sum, asc] = await Promise.all(
-          ["texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"].map((f) => fetchBytes(`${tlnet}/tlpkg/${f}`)),
-        );
-        writeFileSync(join(dir, "texlive.tlpdb.xz"), xz);
-        writeFileSync(join(dir, "texlive.tlpdb.sha512"), sum);
-        writeFileSync(join(dir, "texlive.tlpdb.sha512.asc"), asc);
-        const unxz = await run("xz", ["-dkf", join(dir, "texlive.tlpdb.xz")]);
-        if (unxz.code !== 0) throw new Error(`Could not decompress the package database: ${unxz.output}`);
-        const raw = readFileSync(join(dir, "texlive.tlpdb"));
-        if (sha512(raw) !== sum.toString("utf8").trim().split(/\s+/)[0]) throw new Error(`${tlnet}: checksum mismatch`);
-        return { tlnet, dir, raw, revision: tlpdbRevision(raw.toString("utf8", 0, 20_000)) };
-      }),
-    );
-    const good = fetched.flatMap((f) => (f.status === "fulfilled" ? [f.value] : []));
-    if (good.length === 0) throw new Error(`Could not read the package database from ${ranked.join(", ")}`);
+    const t0 = performance.now();
+    type Candidate = { tlnet: string; dir: string; raw: Buffer; revision: number };
+    const good: Candidate[] = [];
+    const tasks = ranked.map(async (tlnet, i): Promise<Candidate> => {
+      const dir = join(this.work, "tlpdb", String(i));
+      mkdirSync(dir, { recursive: true });
+      const [xz, sum, asc] = await Promise.all(
+        ["texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"].map((f) => fetchBytes(`${tlnet}/tlpkg/${f}`)),
+      );
+      writeFileSync(join(dir, "texlive.tlpdb.xz"), xz);
+      writeFileSync(join(dir, "texlive.tlpdb.sha512"), sum);
+      writeFileSync(join(dir, "texlive.tlpdb.sha512.asc"), asc);
+      const unxz = await run("xz", ["-dkf", join(dir, "texlive.tlpdb.xz")]);
+      if (unxz.code !== 0) throw new Error(`Could not decompress the package database: ${unxz.output}`);
+      const raw = readFileSync(join(dir, "texlive.tlpdb"));
+      if (sha512(raw) !== sum.toString("utf8").trim().split(/\s+/)[0]) throw new Error(`${tlnet}: checksum mismatch`);
+      const candidate = { tlnet, dir, raw, revision: tlpdbRevision(raw.toString("utf8", 0, 20_000)) };
+      good.push(candidate);
+      return candidate;
+    });
+    for (const t of tasks) t.catch(() => undefined);
+    try {
+      await Promise.any(tasks);
+    } catch {
+      throw new Error(`Could not read the package database from ${ranked.join(", ")}`);
+    }
+    // Give the other mirrors a short grace period; never wait for a slow one.
+    await Promise.race([Promise.allSettled(tasks), new Promise((r) => setTimeout(r, 2000))]);
     const best = good.reduce((a, b) => (b.revision > a.revision ? b : a));
+    this.log(
+      `Package database: ${best.tlnet} (revision ${best.revision}; compared ${good.map((g) => g.revision).join(", ")}) in ${seconds(t0)} s`,
+    );
     const tlpkg = join(this.repo, "tlpkg");
     mkdirSync(tlpkg, { recursive: true });
     for (const f of ["texlive.tlpdb", "texlive.tlpdb.xz", "texlive.tlpdb.sha512", "texlive.tlpdb.sha512.asc"]) {

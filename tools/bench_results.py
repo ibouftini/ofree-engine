@@ -22,13 +22,14 @@ jobs = [json.loads(line) for line in raw.splitlines() if line.strip()]
 ts = lambda s: dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
 secs = lambda a, b: round((ts(b) - ts(a)).total_seconds())
 BUILD_STEPS = ("latex-action", ".ofree-engine")
+is_build = lambda name: any(b in name for b in BUILD_STEPS) or name == "Run ./"
 
 rows = {}
 for j in jobs:
     if " · " not in j["name"] or j.get("conclusion") in (None, "skipped") or not j.get("completed_at"):
         continue
     variant, entry = j["name"].split(" · ", 1)
-    step = next((s for s in j.get("steps", []) if any(b in s["name"] for b in BUILD_STEPS) and s.get("completed_at")), None)
+    step = next((s for s in j.get("steps", []) if is_build(s["name"]) and s.get("completed_at")), None)
     rows.setdefault(entry, {})[variant] = {
         "ok": j["conclusion"] == "success",
         "job": secs(j["started_at"], j["completed_at"]),

@@ -175,21 +175,29 @@ async function main() {
   const useCache = core.getInput("cache") !== "false" && cacheAvailable();
   const restored = useCache ? await restoreTexLive(texdir, arch, fp) : { exact: false, key: undefined };
   const tl = new TexLive(texdir, arch, work, year);
+  tl.log = (m) => core.info(m);
+  core.info(`Cache: ${restored.key ? `${restored.exact ? "exact" : "partial"} match ${restored.key}` : "no entry"} (${seconds(t)} s)`);
   let resolution: Resolution | undefined;
   let provisionedFrom = restored.exact && tl.present ? "restored from the cache" : "";
   if (!provisionedFrom) {
     const { db, index } = await tl.database();
     resolution = resolvePackages(db, index, arch, docs, extraPackages);
+    let s = performance.now();
     const installed = await tl.install(resolution.packages);
+    core.info(`Installed ${installed.length} packages (${tl.stats.coldInstall ? "first install" : "added to the cached TeX Live"}) in ${seconds(s)} s`);
     // Read the files of every package the documents use, not only new ones:
     // a restored installation may predate their dependencies.
+    s = performance.now();
     await completeDependencies(tl, arch, [...installed, ...resolution.reasons.keys()]);
+    core.info(`Dependency check done in ${seconds(s)} s`);
     provisionedFrom = restored.key
       ? "restored from the cache, then completed"
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
   }
+  let s = performance.now();
   await tl.ensureFormats(docs.map((d) => d.engine));
   await tl.ensureFontconfig();
+  core.info(`Formats and fonts ready in ${seconds(s)} s`);
   phases.provision = seconds(t);
 
   // 3. Optional user setup (compatibility inputs).
