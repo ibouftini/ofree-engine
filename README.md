@@ -160,7 +160,7 @@ pnpm run build   # dist/ is committed; CI checks it is up to date
 
 ## Use of AI
 
-I wrote the first working version of this project, which ran LaTeX in different formats and used a cache. AI then helped add new features, such as support for more languages, and make the action more robust.
+I wrote the first working version of this project, which ran LaTeX in different formats and used a cache. AI then helped me add new features, such as support for more languages, and make the action more robust.
 
 ## License
 
