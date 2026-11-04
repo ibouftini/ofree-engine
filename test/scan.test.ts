@@ -243,6 +243,14 @@ describe("conditionals", () => {
     expect(d.requires.has("inputenc.sty")).toBe(false);
   });
 
+  it("adds what plautopatch loads, which the luatexja branch used to bring by accident", () => {
+    const d = planDocument(fx("conditionals"), "uplatex.tex");
+    expect(d.engine).toBe("uplatex");
+    expect(d.requires.has("luatexja.sty")).toBe(false);
+    expect(d.requires.has("pxjahyper.sty")).toBe(true);
+    expect(d.requires.has("pxpgfmark.sty")).toBe(true);
+  });
+
   it("reads font files from Extension and UprightFont, before or after the name", () => {
     const d = planDocument(fx("conditionals"), "main.tex");
     expect([...d.fonts.keys()].sort()).toEqual(["XITS-Regular.otf", "XITSMath-Regular.otf"]);

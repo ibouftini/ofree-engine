@@ -793,6 +793,14 @@ export function planDocument(workspace: string, root: string, opts: PlanOptions 
     }
   }
 
+  // plautopatch loads these for hyperref and pgf under pLaTeX and upLaTeX; no package declares them.
+  if (engine === "platex" || engine === "uplatex") {
+    const hyperref = acc.requires.get("hyperref.sty");
+    if (hyperref) addOnce(acc.requires, "pxjahyper.sty", hyperref);
+    const pgf = ["tikz.sty", "pgf.sty", "pgfcore.sty", "pgfplots.sty"].map((f) => acc.requires.get(f)).find(Boolean);
+    if (pgf) addOnce(acc.requires, "pxpgfmark.sty", pgf);
+  }
+
   // Languages from class options count only when babel is loaded.
   const languages = new Map<string, Ref>();
   for (const [lang, r] of acc.languages) {
