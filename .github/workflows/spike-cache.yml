@@ -5,9 +5,6 @@ name: Spike · cache contents
 
 on:
   workflow_dispatch:
-  push:
-    branches: [edge-cases]
-    paths: [".github/workflows/spike-cache.yml"]
 
 jobs:
   inspect:

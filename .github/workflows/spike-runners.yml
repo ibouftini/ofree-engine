@@ -2,13 +2,9 @@ name: Spike · runners
 
 # The action on runners other than x86 Ubuntu 24.04: ARM, macOS, the next
 # Ubuntu (ubuntu-latest moves to it), and a container job without sudo.
-# Rerun after: fonts linked for XeTeX on macOS; rc file fixed.
 
 on:
   workflow_dispatch:
-  push:
-    branches: [edge-cases]
-    paths: [".github/workflows/spike-runners.yml"]
 
 jobs:
   runner:

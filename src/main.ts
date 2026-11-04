@@ -101,19 +101,21 @@ async function systemHas(name: string): Promise<boolean> {
 
 async function installSystemPackages(pkgs: string[]) {
   core.info(`Installing system packages: ${pkgs.join(" ")}`);
-  const install = (names: string[]) =>
-    run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", ...names], { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } });
+  // Container jobs often run as root, without sudo.
+  const apt = (args: string[]) =>
+    process.getuid?.() === 0
+      ? run("apt-get", args, { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } })
+      : run("sudo", ["apt-get", ...args], { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } });
+  const install = (names: string[]) => apt(["install", "-y", "-qq", "--no-install-recommends", ...names]);
   // The runner's package lists are usually current enough; update only if that fails.
   let all = await install(pkgs);
   if (all.code === 0) return;
-  await run("sudo", ["apt-get", "update", "-qq"]);
+  await apt(["update", "-qq"]);
   all = await install(pkgs);
   if (all.code === 0) return;
   // One unknown name should not block the others.
   for (const p of pkgs) {
-    const r = await run("sudo", ["apt-get", "install", "-y", "-qq", "--no-install-recommends", p], {
-      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
-    });
+    const r = await install([p]);
     if (r.code !== 0) core.warning(`System package '${p}' could not be installed; continuing without it.`);
   }
 }
