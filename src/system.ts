@@ -101,8 +101,9 @@ export class SystemPrograms {
     if (!existsSync(this.dir)) return false;
     const tars = readdirSync(this.dir).filter((f) => f.endsWith(".tar"));
     if (tars.length === 0) return false;
+    // No ldconfig: it reads every library on a disk that loads lazily (up to 25 s), and the
+    // loader finds these in the standard folders anyway. ensure() checks the programs run.
     for (const f of tars) await this.root("tar", ["-xf", join(this.dir, f), this.osDarwin ? "-k" : "--skip-old-files", "-C", "/"]);
-    if (!this.osDarwin) await this.root("ldconfig", []);
     return true;
   }
 
@@ -186,6 +187,8 @@ export class SystemPrograms {
     if (this.manager === "brew") return known.brew;
     if (this.manager !== "apt" || !known.apt) return undefined;
     if (known.apt.length === 1) return known.apt[0];
+    const held = this.manifest().packages;
+    for (const p of known.apt) if (held.includes(p)) return p;
     for (const p of known.apt) if ((await run("apt-cache", ["show", p])).code === 0) return p;
     return known.apt[0];
   }

@@ -3,7 +3,7 @@ name: Spike · system programs without apt
 # Can programs from apt be restored from a snapshot of the files they added?
 # One job installs with apt, measures it and saves the snapshot; another, on a
 # clean runner, restores the snapshot and uses the programs for real.
-# Rerun: libraries found through links.
+# Rerun: restore without ldconfig.
 
 on:
   workflow_dispatch:
