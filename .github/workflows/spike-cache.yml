@@ -93,14 +93,15 @@ jobs:
           upload: false
       - name: State of the maps
         run: |
+          set +e
           T=~/.ofree/texlive; export PATH=$T/bin/x86_64-linux:$PATH
           cd test/fixtures/japanese-class
-          echo "--- map dir"; ls -la $T/texmf-var/fonts/map/dvipdfmx/updmap/ || true
-          echo "--- kanjix entries"; wc -l $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map || true; grep -c '^uprml-h' $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map || true
-          echo "--- kpsewhich"; kpsewhich kanjix.map; kpsewhich uptex-haranoaji.map; kpsewhich ptex-haranoaji.map; kpsewhich -progname=dvipdfmx -format=map kanjix.map; kpsewhich -progname=dvipdfmx dvipdfmx.cfg
-          echo "--- updmap.cfg"; grep -n -i "kanji\|jaEmbed" $T/texmf-dist/web2c/updmap.cfg | head -20
-          echo "--- texmf-config"; ls -la $T/texmf-config/web2c/ 2>/dev/null; cat $T/texmf-config/web2c/updmap.cfg 2>/dev/null | head
-          echo "--- ls-R var"; ls -la $T/texmf-var/ls-R; grep -c kanjix $T/texmf-var/ls-R || true
-          echo "--- updmap again"; updmap-sys 2>&1 | tail -15
-          echo "--- after"; wc -l $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map; grep -c '^uprml-h' $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map; grep -c kanjix $T/texmf-var/ls-R || true
-          echo "--- compile again"; uplatex -interaction=nonstopmode report.tex >/dev/null; dvipdfmx report.dvi 2>&1 | tail -5; ls -la report.pdf || true
+          echo "--- which"; which dvipdfmx xdvipdfmx; ls -la $T/bin/x86_64-linux/dvipdfmx
+          echo "--- cfg"; C=$(kpsewhich -progname=dvipdfmx -format='other text files' dvipdfmx.cfg); echo "cfg=$C"; grep -n -E '^ *f ' "$C"
+          echo "--- kpse map"; kpsewhich -progname=dvipdfmx -format=map kanjix.map; kpsewhich -progname=dvipdfmx -format=map pdftex.map
+          echo "--- kanjix head"; grep -n 'uprml-h\|upgbm-h' $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map; head -3 $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map
+          echo "--- fonts"; kpsewhich HaranoAjiMincho-Regular.otf; kpsewhich -format=opentype HaranoAjiMincho-Regular.otf; kpsewhich uprml-h.tfm; kpsewhich -format=vf uprml-h.vf
+          echo "--- compile as is"; uplatex -interaction=nonstopmode report.tex >/dev/null; ls -la report.dvi; dvipdfmx -vv report.dvi 2>&1 | grep -E -i "map|fatal|uprml|config|Could not" | head -20
+          echo "--- updmap again"; updmap-sys 2>&1 | grep -E -i "kanji|error|warn|Generating|Output" | head -15
+          echo "--- compile after updmap"; dvipdfmx -vv report.dvi 2>&1 | grep -E -i "fatal|Could not|Output" | head; ls -la report.pdf
+          exit 0
