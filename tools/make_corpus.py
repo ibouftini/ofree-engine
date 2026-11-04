@@ -119,7 +119,6 @@ def workflow(entries):
                 f"    name: {variant} · {e['id']}",
                 f"    if: ${{{{ inputs.only == '' || contains(format(',{{0}},', inputs.only), ',{e['id']},') }}}}",
                 "    runs-on: ubuntu-latest",
-                *(["    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run"] if variant == "incumbent" else []),
                 "    timeout-minutes: 30",
                 "    steps:",
                 "      - uses: actions/checkout@v5",
@@ -131,7 +130,7 @@ def workflow(entries):
             if e.get("checkout_path"):
                 out.append(f"          path: {e['checkout_path']}")
             if variant == "incumbent":
-                out.append("      - uses: xu-cheng/latex-action@v4")
+                out += ["      - id: build", "        uses: xu-cheng/latex-action@v4", "        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed"]
             else:
                 out += [
                     "      - uses: actions/checkout@v5",
@@ -142,6 +141,9 @@ def workflow(entries):
             if e["with"]:
                 out.append("        with:")
                 out.append(yaml_with(e["with"], 10))
+            if variant == "incumbent":
+                # bench_results.py reads this step: the job itself passes either way.
+                out += ["      - name: The incumbent failed", "        if: steps.build.outcome == 'failure'", "        run: echo \"xu-cheng/latex-action failed on this entry\""]
             out.append("")
     needs = ", ".join(f"{v}-{e['id']}" for e in entries for v in ("incumbent", "ours"))
     out += [

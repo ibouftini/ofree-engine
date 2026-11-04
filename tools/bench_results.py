@@ -31,7 +31,8 @@ for j in jobs:
     variant, entry = j["name"].split(" · ", 1)
     step = next((s for s in j.get("steps", []) if is_build(s["name"]) and s.get("completed_at")), None)
     rows.setdefault(entry, {})[variant] = {
-        "ok": j["conclusion"] == "success",
+        # The incumbent's job passes even when it fails, so that this does not mark the commit as failed.
+        "ok": j["conclusion"] == "success" and not any(s["name"] == "The incumbent failed" and s.get("conclusion") == "success" for s in j.get("steps", [])),
         "job": secs(j["started_at"], j["completed_at"]),
         "step": secs(step["started_at"], step["completed_at"]) if step else None,
     }

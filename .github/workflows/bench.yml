@@ -42,20 +42,25 @@ jobs:
   incumbent:
     name: incumbent · ${{ matrix.doc }}
     runs-on: ubuntu-latest
-    continue-on-error: true # it fails on some samples by design; only this action's jobs decide the run
     strategy:
       fail-fast: false
       matrix:
         doc: ${{ fromJSON(inputs.docs || '["paper","arabic","lua","cv","book","beamer","glossary","chinese","urdu","bidi","plots","chemistry","errors","fonts","roots","programs","uplatex","platex"]') }}
     steps:
       - uses: actions/checkout@v5
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true # it fails on some samples by design, which must not mark the commit as failed
         with:
           root_file: main.tex
           working_directory: bench/samples/${{ matrix.doc }}
           latexmk_use_xelatex: ${{ contains(fromJSON('["arabic","cv","chinese","urdu","fonts"]'), matrix.doc) }}
           latexmk_use_lualatex: ${{ contains(fromJSON('["lua","bidi"]'), matrix.doc) }}
           latexmk_shell_escape: ${{ matrix.doc == 'programs' }}
+      # bench_results.py reads this step: the job itself passes either way.
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this sample"
 
   results:
     needs: [ours, incumbent]

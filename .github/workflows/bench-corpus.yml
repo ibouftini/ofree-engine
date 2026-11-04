@@ -17,7 +17,6 @@ jobs:
     name: incumbent · assumptionsofphysics-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',assumptionsofphysics-book,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -26,10 +25,15 @@ jobs:
           ref: 7290c7ed03c48d2fb644a3dab0c274428ee57dc2
           submodules: recursive
           path: book
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "book"
           root_file: "book.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-assumptionsofphysics-book:
     name: ours · assumptionsofphysics-book
@@ -55,7 +59,6 @@ jobs:
     name: incumbent · blockstreamresearch-zk-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',blockstreamresearch-zk-book,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -63,11 +66,16 @@ jobs:
           repository: BlockstreamResearch/zk-book
           ref: 0699ceb2a6a1e5cb83dd837254dbca869b557901
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "book.tex"
           texlive_version: "2020"
           latexmk_shell_escape: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-blockstreamresearch-zk-book:
     name: ours · blockstreamresearch-zk-book
@@ -93,7 +101,6 @@ jobs:
     name: incumbent · cvxgrp-cvxcla
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cvxgrp-cvxcla,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -101,11 +108,16 @@ jobs:
           repository: cvxgrp/cvxcla
           ref: 106cfa430bd51521ae75f1361b3a0f5da8be1364
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "comparison.tex"
           working_directory: "docs/paper"
           args: "-pdf -file-line-error -halt-on-error -interaction=nonstopmode"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-cvxgrp-cvxcla:
     name: ours · cvxgrp-cvxcla
@@ -131,7 +143,6 @@ jobs:
     name: incumbent · dcroote-stanford-thesis-example
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dcroote-stanford-thesis-example,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -139,9 +150,14 @@ jobs:
           repository: dcroote/stanford-thesis-example
           ref: ffef6af633d0716fb0592b83c8ce594ed38819d2
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-dcroote-stanford-thesis-example:
     name: ours · dcroote-stanford-thesis-example
@@ -165,7 +181,6 @@ jobs:
     name: incumbent · fhdwpb-latex-thesis-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fhdwpb-latex-thesis-template,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -173,9 +188,14 @@ jobs:
           repository: FHDWPB/latex-thesis-template
           ref: 0e73f77c440b618da1050dce1b3939c5536dcd95
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "Thesis.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-fhdwpb-latex-thesis-template:
     name: ours · fhdwpb-latex-thesis-template
@@ -199,7 +219,6 @@ jobs:
     name: incumbent · gboeing-cv
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',gboeing-cv,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -207,9 +226,14 @@ jobs:
           repository: gboeing/cv
           ref: be25029bcf64eb3d5882bf8c10cb398a4ecd9ef2
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "cv-gboeing.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-gboeing-cv:
     name: ours · gboeing-cv
@@ -233,7 +257,6 @@ jobs:
     name: incumbent · harvard-edge-cs249r-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',harvard-edge-cs249r-book,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -241,10 +264,15 @@ jobs:
           repository: harvard-edge/cs249r_book
           ref: 8dd8e32dffbaaf4ab0d43267a4a409b2239c8172
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "paper.tex"
           working_directory: "staffml/paper"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-harvard-edge-cs249r-book:
     name: ours · harvard-edge-cs249r-book
@@ -269,7 +297,6 @@ jobs:
     name: incumbent · iydon-sustechthesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',iydon-sustechthesis,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -277,13 +304,18 @@ jobs:
           repository: iydon/sustechthesis
           ref: 8a2fb7559dcdbe7d014a66d1d8e0dbc44db60bb9
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: |
             main.tex
             main_english.tex
             slides.tex
           latexmk_use_xelatex: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-iydon-sustechthesis:
     name: ours · iydon-sustechthesis
@@ -311,7 +343,6 @@ jobs:
     name: incumbent · nag-devops-speed-hpc
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',nag-devops-speed-hpc,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -319,7 +350,9 @@ jobs:
           repository: NAG-DevOps/speed-hpc
           ref: e45df3cbfaa1c99a362032b991207fe436bdedcc
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "speed-manual.tex"
           working_directory: "doc/"
@@ -329,6 +362,9 @@ jobs:
           args: "-pdf -file-line-error -interaction=nonstopmode"
           latexmk_use_lualatex: "false"
           latexmk_use_xelatex: "false"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-nag-devops-speed-hpc:
     name: ours · nag-devops-speed-hpc
@@ -359,7 +395,6 @@ jobs:
     name: incumbent · openhutb-neuro
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',openhutb-neuro,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -367,11 +402,16 @@ jobs:
           repository: OpenHUTB/neuro
           ref: 949766a3efd462baef6158678a58a81abc305704
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "neuro.tex"
           texlive_version: "2025"
           latexmk_use_xelatex: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-openhutb-neuro:
     name: ours · openhutb-neuro
@@ -397,7 +437,6 @@ jobs:
     name: incumbent · ruiguoz-nwpu-beamer
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ruiguoz-nwpu-beamer,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -405,11 +444,16 @@ jobs:
           repository: ruiguoz/NWPU-BEAMER
           ref: 68232f96796065fcce2a76512168ca5f0d6760e9
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
           latexmk_use_xelatex: "true"
           texlive_version: "2026"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ruiguoz-nwpu-beamer:
     name: ours · ruiguoz-nwpu-beamer
@@ -435,7 +479,6 @@ jobs:
     name: incumbent · spacelab-ufsc-obdh2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spacelab-ufsc-obdh2,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -443,10 +486,15 @@ jobs:
           repository: spacelab-ufsc/obdh2
           ref: 3f0ad36d8c20eb2a0200928d99f2a85b7b0e4df3
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "doc/presentation"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-spacelab-ufsc-obdh2:
     name: ours · spacelab-ufsc-obdh2
@@ -471,7 +519,6 @@ jobs:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -479,11 +526,16 @@ jobs:
           repository: spamegg1/Epp-Discrete-Math-5th-solutions
           ref: e927daf5afcbfd761ae51d59ccc98f76d31522a1
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "src"
           root_file: "Epp.tex"
           latexmk_shell_escape: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-spamegg1-epp-discrete-math-5th-solutions:
     name: ours · spamegg1-epp-discrete-math-5th-solutions
@@ -509,7 +561,6 @@ jobs:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions-2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions-2,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -517,11 +568,16 @@ jobs:
           repository: spamegg1/Epp-Discrete-Math-5th-solutions
           ref: e927daf5afcbfd761ae51d59ccc98f76d31522a1
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "src"
           root_file: "Epp.tex"
           latexmk_shell_escape: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-spamegg1-epp-discrete-math-5th-solutions-2:
     name: ours · spamegg1-epp-discrete-math-5th-solutions-2
@@ -547,7 +603,6 @@ jobs:
     name: incumbent · ucl-tdms
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ucl-tdms,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -555,10 +610,15 @@ jobs:
           repository: UCL/TDMS
           ref: d9d5ad58dc1fa6b455c9bec7b5b6114f386e1e76
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "masterdoc.tex"
           working_directory: "doc/latex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ucl-tdms:
     name: ours · ucl-tdms
@@ -583,7 +643,6 @@ jobs:
     name: incumbent · varaprasad6700-resume
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',varaprasad6700-resume,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -591,9 +650,14 @@ jobs:
           repository: varaprasad6700/resume
           ref: 0d4f57faffbe940738f0819be14e1928cc488bef
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "resume.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-varaprasad6700-resume:
     name: ours · varaprasad6700-resume
@@ -617,7 +681,6 @@ jobs:
     name: incumbent · ac-pate-latex-resume
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ac-pate-latex-resume,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -625,9 +688,14 @@ jobs:
           repository: ac-pate/LaTeX-Resume
           ref: b6ac5852462adbe7c5070289336a09bc77944f21
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "resume_2025.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ac-pate-latex-resume:
     name: ours · ac-pate-latex-resume
@@ -651,7 +719,6 @@ jobs:
     name: incumbent · adolbyb-icom-706-mkiig
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',adolbyb-icom-706-mkiig,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -659,10 +726,15 @@ jobs:
           repository: ADolbyB/icom-706-mkiig
           ref: 908edeaf839c0148f778176dd4b04ebb07a75a5d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "OOBmod.tex"
           working_directory: "docs/OOBmod"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-adolbyb-icom-706-mkiig:
     name: ours · adolbyb-icom-706-mkiig
@@ -687,7 +759,6 @@ jobs:
     name: incumbent · ahmed-alhindawi-latex-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ahmed-alhindawi-latex-template,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -695,10 +766,15 @@ jobs:
           repository: ahmed-alhindawi/latex-template
           ref: e787bb7a8555a0be130df081371163bb1649c40e
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
           working_directory: "."
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ahmed-alhindawi-latex-template:
     name: ours · ahmed-alhindawi-latex-template
@@ -723,7 +799,6 @@ jobs:
     name: incumbent · anastasia-labs-midgard
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',anastasia-labs-midgard,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -731,10 +806,15 @@ jobs:
           repository: Anastasia-Labs/midgard
           ref: 41284d8974568f47ef35cb96e23acbf1b56894c2
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "midgard.tex"
           working_directory: "technical-spec/"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-anastasia-labs-midgard:
     name: ours · anastasia-labs-midgard
@@ -759,7 +839,6 @@ jobs:
     name: incumbent · andstor-tex-paper-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',andstor-tex-paper-template,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -767,11 +846,16 @@ jobs:
           repository: andstor/tex-paper-template
           ref: bef5472df3e1d439403e017a3ae057d01c469aea
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
           extra_system_packages: "perl-file-which"
           latexmk_shell_escape: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-andstor-tex-paper-template:
     name: ours · andstor-tex-paper-template
@@ -797,7 +881,6 @@ jobs:
     name: incumbent · bagaswizard-buku-ta
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bagaswizard-buku-ta,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -805,9 +888,14 @@ jobs:
           repository: bagaswizard/Buku_TA
           ref: 322081235295f91eb89b51edb8874588e834b0a8
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-bagaswizard-buku-ta:
     name: ours · bagaswizard-buku-ta
@@ -831,7 +919,6 @@ jobs:
     name: incumbent · bipplane-resume-latex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bipplane-resume-latex,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -839,9 +926,14 @@ jobs:
           repository: bipplane/resume-latex
           ref: 4b7fe3bbc2bd7eb5daff679eff91ad40aec80520
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "resume.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-bipplane-resume-latex:
     name: ours · bipplane-resume-latex
@@ -865,7 +957,6 @@ jobs:
     name: incumbent · cao-wuhui-szu-latex-master-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cao-wuhui-szu-latex-master-template,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -873,7 +964,9 @@ jobs:
           repository: Cao-Wuhui/SZU_Latex_Master_Template
           ref: 79c3ba378a933be2427d0787638458f9a45bce2d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "master_pang.tex"
           latexmk_use_xelatex: "true"
@@ -917,6 +1010,9 @@ jobs:
             FONTCFG
             
             fc-cache -fv
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-cao-wuhui-szu-latex-master-template:
     name: ours · cao-wuhui-szu-latex-master-template
@@ -981,7 +1077,6 @@ jobs:
     name: incumbent · capitan-parrot-salary-estimator
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',capitan-parrot-salary-estimator,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -989,11 +1084,16 @@ jobs:
           repository: Capitan-Parrot/salary-estimator
           ref: 7532373195a841101d40ccf953cbdf59a103ce8d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
           working_directory: "docs/latex"
           args: "-pdf -interaction=nonstopmode -file-line-error"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-capitan-parrot-salary-estimator:
     name: ours · capitan-parrot-salary-estimator
@@ -1019,7 +1119,6 @@ jobs:
     name: incumbent · cengkooo-proposal-imul-123140205
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cengkooo-proposal-imul-123140205,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1027,9 +1126,14 @@ jobs:
           repository: cengkooo/proposal-imul-123140205
           ref: aec1a3f5ff76526fc348ab17e1f2b66770f7a7de
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-cengkooo-proposal-imul-123140205:
     name: ours · cengkooo-proposal-imul-123140205
@@ -1053,7 +1157,6 @@ jobs:
     name: incumbent · ctex-org-lshort-zh-cn
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ctex-org-lshort-zh-cn,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1061,11 +1164,16 @@ jobs:
           repository: CTeX-org/lshort-zh-cn
           ref: 3b6fbb2f88f81eb12a405db0988e53702cac10ee
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "lshort-zh-cn.tex"
           working_directory: "src"
           args: "-r latexmkrc"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ctex-org-lshort-zh-cn:
     name: ours · ctex-org-lshort-zh-cn
@@ -1091,7 +1199,6 @@ jobs:
     name: incumbent · david-alvarez-rosa-curriculum-vitae
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',david-alvarez-rosa-curriculum-vitae,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1099,10 +1206,15 @@ jobs:
           repository: david-alvarez-rosa/curriculum-vitae
           ref: 92dcf32a8e0b484d41229b65a8b6e42ef6cadcec
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "david-alvarez-rosa-cv.tex"
           latexmk_use_xelatex: "false"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-david-alvarez-rosa-curriculum-vitae:
     name: ours · david-alvarez-rosa-curriculum-vitae
@@ -1127,7 +1239,6 @@ jobs:
     name: incumbent · diebrate-diebrate-github-io
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',diebrate-diebrate-github-io,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1135,11 +1246,16 @@ jobs:
           repository: Diebrate/Diebrate.github.io
           ref: 4ac87cd619a3e0d03b8cdd97bdd206dbd5c05b6f
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "resume_special.tex"
           working_directory: "resume"
           args: "-pdf -outdir=build -file-line-error -halt-on-error -interaction=nonstopmode"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-diebrate-diebrate-github-io:
     name: ours · diebrate-diebrate-github-io
@@ -1165,7 +1281,6 @@ jobs:
     name: incumbent · digama0-conzf
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digama0-conzf,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1173,10 +1288,15 @@ jobs:
           repository: digama0/ConZF
           ref: ac9f5938defe171bcdbef7e5469bc4a489392c17
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "doc"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-digama0-conzf:
     name: ours · digama0-conzf
@@ -1201,7 +1321,6 @@ jobs:
     name: incumbent · digo-certify-digo-certify-app
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digo-certify-digo-certify-app,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1209,11 +1328,16 @@ jobs:
           repository: DiGo-Certify/DiGo-certify-app
           ref: 0f0c8229551712f8f4f23e996555362eab514843
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "report.tex"
           working_directory: "./docs/final-report"
           extra_system_packages: "inkscape"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-digo-certify-digo-certify-app:
     name: ours · digo-certify-digo-certify-app
@@ -1239,7 +1363,6 @@ jobs:
     name: incumbent · dknaack-master-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dknaack-master-thesis,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1247,7 +1370,9 @@ jobs:
           repository: dknaack/master-thesis
           ref: 7b7691f149a91766fbacd33e3a173182a2129e67
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: |
             figures/lattice.tex
@@ -1255,6 +1380,9 @@ jobs:
             main.tex
           args: "-lualatex -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build"
           latexmk_use_lualatex: "true"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-dknaack-master-thesis:
     name: ours · dknaack-master-thesis
@@ -1283,7 +1411,6 @@ jobs:
     name: incumbent · dr-richard-barker-osdr-x-species-v2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dr-richard-barker-osdr-x-species-v2,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1291,11 +1418,16 @@ jobs:
           repository: dr-richard-barker/OSDR_X-species_V2
           ref: 5fdfb5154b0ebdfe604765bad7f00105e90ce2b2
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "manuscript/latex"
           root_file: "main.tex"
           latexmk_use_xelatex: "false"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-dr-richard-barker-osdr-x-species-v2:
     name: ours · dr-richard-barker-osdr-x-species-v2
@@ -1321,7 +1453,6 @@ jobs:
     name: incumbent · eagleoutice-eagle-maps
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',eagleoutice-eagle-maps,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1329,9 +1460,14 @@ jobs:
           repository: EagleoutIce/eagle-maps
           ref: 4b9f252249b7a8dde8f328ce7bca10266f1caed5
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "eagle-maps.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-eagleoutice-eagle-maps:
     name: ours · eagleoutice-eagle-maps
@@ -1355,7 +1491,6 @@ jobs:
     name: incumbent · erik-donath-mutau-rv32-soc
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',erik-donath-mutau-rv32-soc,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1363,10 +1498,15 @@ jobs:
           repository: Erik-Donath/muTau-RV32-SoC
           ref: 6d37bfeac9128d1ca4ff1f991b048dc3f7b518f7
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "docs/"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-erik-donath-mutau-rv32-soc:
     name: ours · erik-donath-mutau-rv32-soc
@@ -1391,7 +1531,6 @@ jobs:
     name: incumbent · fascetta-tool-lora-skill-ir
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fascetta-tool-lora-skill-ir,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1399,10 +1538,15 @@ jobs:
           repository: Fascetta/tool-lora-skill-ir
           ref: 5e5b430ace4e96e20b9ce07e5551b755145e264e
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "report"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-fascetta-tool-lora-skill-ir:
     name: ours · fascetta-tool-lora-skill-ir
@@ -1427,7 +1571,6 @@ jobs:
     name: incumbent · feathbow-tju-rl-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',feathbow-tju-rl-template,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1435,11 +1578,16 @@ jobs:
           repository: FeathBow/TJU-RL-template
           ref: 3ae6c557d057d30c985aa00066022c04debbd906
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
           latexmk_use_xelatex: "true"
           args: "-pdf -file-line-error -halt-on-error -interaction=nonstopmode"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-feathbow-tju-rl-template:
     name: ours · feathbow-tju-rl-template
@@ -1465,7 +1613,6 @@ jobs:
     name: incumbent · firefly-cpp-cover-letter-latex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',firefly-cpp-cover-letter-latex,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1473,9 +1620,14 @@ jobs:
           repository: firefly-cpp/cover-letter-latex
           ref: 0dc422505a1ea92d5bfe688f2aa1acf87dcee405
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "jourcl.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-firefly-cpp-cover-letter-latex:
     name: ours · firefly-cpp-cover-letter-latex
@@ -1499,7 +1651,6 @@ jobs:
     name: incumbent · fmuro-alg1
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fmuro-alg1,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1507,9 +1658,14 @@ jobs:
           repository: FMuro/alg1
           ref: 65caa5795da9d78fd4a781f613353c946ed831de
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-fmuro-alg1:
     name: ours · fmuro-alg1
@@ -1533,7 +1689,6 @@ jobs:
     name: incumbent · franzmohr-fincommons
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',franzmohr-fincommons,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1541,11 +1696,16 @@ jobs:
           repository: franzmohr/fincommons
           ref: f0c109d6027a442294cd43980128eef68cc0385f
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "fincommons.tex"
           working_directory: "docs/handbook"
           latexmk_use_lualatex: "false"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-franzmohr-fincommons:
     name: ours · franzmohr-fincommons
@@ -1571,7 +1731,6 @@ jobs:
     name: incumbent · garebear99-freeeq8
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',garebear99-freeeq8,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1579,10 +1738,15 @@ jobs:
           repository: GareBear99/FreeEQ8
           ref: 11376c1c496569c975e4d195c3fe5fd44b53d415
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "DAFx26_SIMPLE.tex"
           working_directory: "paper/dafx_submit"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-garebear99-freeeq8:
     name: ours · garebear99-freeeq8
@@ -1607,7 +1771,6 @@ jobs:
     name: incumbent · ghdaru-tesedaru
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ghdaru-tesedaru,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1615,11 +1778,16 @@ jobs:
           repository: GHDaru/tesedaru
           ref: 1a6d1915514c0b3072be6e2f77d74bbdc5acf01d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "principal.tex"
           latexmk_use_xelatex: "false"
           args: "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-ghdaru-tesedaru:
     name: ours · ghdaru-tesedaru
@@ -1645,7 +1813,6 @@ jobs:
     name: incumbent · kuisthesis-kyoto
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kuisthesis-kyoto,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1653,9 +1820,14 @@ jobs:
           repository: CommCompEngKyotoU/kuisthesis-template
           ref: 62b2d110e06247107692f1cf3642492615a5cda5
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "guide.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-kuisthesis-kyoto:
     name: ours · kuisthesis-kyoto
@@ -1679,7 +1851,6 @@ jobs:
     name: incumbent · prg-thesis-titech
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',prg-thesis-titech,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1687,9 +1858,14 @@ jobs:
           repository: prg-titech/prg-thesis-template-ja
           ref: 9d976bc08751d277e6638d94a4b9d26b395f752b
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "thesis.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-prg-thesis-titech:
     name: ours · prg-thesis-titech
@@ -1713,7 +1889,6 @@ jobs:
     name: incumbent · cpslab-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cpslab-thesis,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1721,9 +1896,14 @@ jobs:
           repository: cpslab/graduation-thesis-template
           ref: 5ce39279615969d54df4cb8a6cddcb52706900c5
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main_thesis.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-cpslab-thesis:
     name: ours · cpslab-thesis
@@ -1747,7 +1927,6 @@ jobs:
     name: incumbent · coins-article-tsukuba
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',coins-article-tsukuba,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1755,9 +1934,14 @@ jobs:
           repository: KaiseiYokoyama/coins_graduation_article
           ref: 69d48f3f4342717af06303382f911338c2d22c15
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "article.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-coins-article-tsukuba:
     name: ours · coins-article-tsukuba
@@ -1781,7 +1965,6 @@ jobs:
     name: incumbent · matsumoto-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',matsumoto-thesis,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1789,9 +1972,14 @@ jobs:
           repository: matsumotokoki/thesis_template
           ref: 27d033b01b0e56ecbda325982926821a970e0a28
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "thesis.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-matsumoto-thesis:
     name: ours · matsumoto-thesis
@@ -1815,7 +2003,6 @@ jobs:
     name: incumbent · kut-platex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kut-platex,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1823,10 +2010,15 @@ jobs:
           repository: TakumiJinushi/2025_KUT_ele_templates
           ref: 1f5ee8efa2577195c04c211b8eed0a801dab1a3d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "KUT_ele_pLaTeX_ver"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-kut-platex:
     name: ours · kut-platex
@@ -1851,7 +2043,6 @@ jobs:
     name: incumbent · kut-lualatex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kut-lualatex,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1859,10 +2050,15 @@ jobs:
           repository: TakumiJinushi/2025_KUT_ele_templates
           ref: 1f5ee8efa2577195c04c211b8eed0a801dab1a3d
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "KUT_ele_LuaTeX_ver"
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-kut-lualatex:
     name: ours · kut-lualatex
@@ -1887,7 +2083,6 @@ jobs:
     name: incumbent · being24-template-ja
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',being24-template-ja,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1895,9 +2090,14 @@ jobs:
           repository: being24/latex-template-ja
           ref: 65c9069ff8998014eed9ec1e4cbb5de03b291fcd
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "main.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-being24-template-ja:
     name: ours · being24-template-ja
@@ -1921,7 +2121,6 @@ jobs:
     name: incumbent · bando-weekly-report
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bando-weekly-report,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1929,10 +2128,15 @@ jobs:
           repository: b-sigpro/weekly-report
           ref: e0ce21acbdb4a496fd471f8791420a44203af46e
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           working_directory: "template"
           root_file: "report.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-bando-weekly-report:
     name: ours · bando-weekly-report
@@ -1957,7 +2161,6 @@ jobs:
     name: incumbent · rirekisho-lualatexja
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',rirekisho-lualatexja,') }}
     runs-on: ubuntu-latest
-    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1965,9 +2168,14 @@ jobs:
           repository: jeandeaual/rirekisho
           ref: 96ccd2cd4b7da6624fbe9a2e0f509bfb829b1ce1
           submodules: recursive
-      - uses: xu-cheng/latex-action@v4
+      - id: build
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true  # it fails on some entries by design, which must not mark the commit as failed
         with:
           root_file: "rirekisho.tex"
+      - name: The incumbent failed
+        if: steps.build.outcome == 'failure'
+        run: echo "xu-cheng/latex-action failed on this entry"
 
   ours-rirekisho-lualatexja:
     name: ours · rirekisho-lualatexja
