@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fontspecAlias, googleFamily, parseGoogleCss } from "../src/fonts.js";
+import { CLOSE_MATCHES, fontspecAlias, googleFamily, lastResortFiles, parseGoogleCss } from "../src/fonts.js";
 
 describe("fonts outside TeX Live", () => {
   it("turns the names documents use into Google Fonts families", () => {
@@ -9,6 +9,14 @@ describe("fonts outside TeX Live", () => {
     // The system packages' CJK names differ from Google's.
     expect(googleFamily("Noto Serif CJK SC")).toBe("Noto Serif SC");
     expect(googleFamily("Noto Sans CJK jp")).toBe("Noto Sans JP");
+  });
+
+  it("has a close match for fonts without a download, and a last resort by style", () => {
+    expect(CLOSE_MATCHES.consolas).toBe("Inconsolata");
+    expect(CLOSE_MATCHES.aptos).toBe("Inter");
+    expect(lastResortFiles("Fira Code").family).toBe("Latin Modern Mono");
+    expect(lastResortFiles("Some Sans").family).toBe("Latin Modern Sans");
+    expect(lastResortFiles("Totally Made Up").family).toBe("Latin Modern Roman");
   });
 
   it("reads the styles the Google Fonts CSS API offers", () => {

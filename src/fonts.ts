@@ -28,6 +28,11 @@ const METRIC_NOTE = "It has the same character widths, so lines and pages break 
 
 const IPA_NOTE = "IPAex has the same Japanese characters as the IPA fonts; only Latin letters are spaced proportionally.";
 const FANDOL_NOTE = "Fandol fonts are of the same styles (Song, Hei, Kai, Fang) and cover the same Chinese characters, but the letters look different.";
+const gyre = (family: string, stem: string) => ({
+  family,
+  files: { Regular: `${stem}-regular.otf`, Bold: `${stem}-bold.otf`, Italic: `${stem}-italic.otf`, BoldItalic: `${stem}-bolditalic.otf` },
+  note: METRIC_NOTE,
+});
 const fandol = (style: string, bold = false) => ({
   family: `Fandol${style}`,
   files: { Regular: `Fandol${style}-Regular.otf`, ...(bold ? { Bold: `Fandol${style}-Bold.otf` } : {}) },
@@ -45,7 +50,26 @@ const TEXLIVE_SUBSTITUTES: Record<string, { family: string; files: Record<string
   simsun: fandol("Song", true), nsimsun: fandol("Song", true), "simsun.ttc": fandol("Song", true),
   simhei: fandol("Hei", true), "simhei.ttf": fandol("Hei", true), microsoftyahei: fandol("Hei", true), "msyh.ttc": fandol("Hei", true), "msyh.ttf": fandol("Hei", true),
   kaiti: fandol("Kai"), "simkai.ttf": fandol("Kai"), fangsong: fandol("Fang"), "simfang.ttf": fandol("Fang"),
+  // Clones of the classic PostScript fonts, in TeX Live, with the same widths.
+  palatino: gyre("TeX Gyre Pagella", "texgyrepagella"), palatinolinotype: gyre("TeX Gyre Pagella", "texgyrepagella"), bookantiqua: gyre("TeX Gyre Pagella", "texgyrepagella"),
+  bookman: gyre("TeX Gyre Bonum", "texgyrebonum"), bookmanoldstyle: gyre("TeX Gyre Bonum", "texgyrebonum"),
+  centuryschoolbook: gyre("TeX Gyre Schola", "texgyreschola"), helvetica: gyre("TeX Gyre Heros", "texgyreheros"), helveticaneue: gyre("TeX Gyre Heros", "texgyreheros"),
+  times: gyre("TeX Gyre Termes", "texgyretermes"), courier: gyre("TeX Gyre Cursor", "texgyrecursor"), avantgarde: gyre("TeX Gyre Adventor", "texgyreadventor"),
 };
+
+/** Selawik, Microsoft's open font with the widths of Segoe UI. It is not on Google Fonts, and covers Latin only. */
+const SELAWIK = {
+  url: "https://github.com/microsoft/Selawik/releases/download/1.01/Selawik_Release.zip",
+  sha256: "3f62c51e05e3b5a1e6241cf92a371f0be2ea1183aa87b30718bbd40832a8d423",
+  files: { Regular: "selawk.ttf", Bold: "selawkb.ttf" },
+};
+
+/** The Latin Modern shapes that stand in for a font found nowhere, by the style its name suggests. */
+export function lastResortFiles(name: string): { family: string; files: Record<string, string> } {
+  if (/mono|code|consol|courier|typewriter|console/i.test(name)) return { family: "Latin Modern Mono", files: { Regular: "lmmono10-regular.otf", Italic: "lmmono10-italic.otf" } };
+  if (/sans|gothic|grotesk|ui\b|arial|helvet|verdana|tahoma/i.test(name)) return { family: "Latin Modern Sans", files: { Regular: "lmsans10-regular.otf", Bold: "lmsans10-bold.otf", Italic: "lmsans10-oblique.otf", BoldItalic: "lmsans10-boldoblique.otf" } };
+  return { family: "Latin Modern Roman", files: { Regular: "lmroman10-regular.otf", Bold: "lmroman10-bold.otf", Italic: "lmroman10-italic.otf", BoldItalic: "lmroman10-bolditalic.otf" } };
+}
 
 
 /** Microsoft's core fonts for the web: installer name and the SHA-256 that Ubuntu's ttf-mscorefonts-installer checks. */
@@ -72,6 +96,17 @@ export const SUBSTITUTES: Record<string, string> = {
   "courier new": "Cousine",
   georgia: "Gelasio",
 };
+
+/**
+ * Fonts with no download and no metric-compatible match, with a free font of a
+ * similar style. Line and page breaks may change, and the warning says so.
+ */
+export const CLOSE_MATCHES: Record<string, string> = {
+  consolas: "Inconsolata", aptos: "Inter", "aptos display": "Inter", "arial narrow": "Archivo Narrow",
+  garamond: "EB Garamond", "century gothic": "Questrial", tahoma: "Open Sans", "lucida sans": "Open Sans",
+  "lucida console": "Cousine", menlo: "Cousine", monaco: "Cousine", "segoe ui light": "Open Sans",
+};
+const CLOSE_NOTE = "It has a similar style, but different character widths, so lines and pages may break differently.";
 
 const FONT_FILE = /\.(ttf|otf|ttc|otc)$/i;
 const SHAPES = [
@@ -209,12 +244,15 @@ export class Fonts {
       }
       out.push(await this.fetch(name, microsoft));
     }
-    if (this.changed) {
-      await run("mktexlsr", [join(this.downloads, "..", "..", "..")], { env: this.env() });
-      await run("fc-cache", [this.downloads], { env: this.env() });
-      this.known = undefined;
-    }
+    if (this.changed) await this.refresh();
     return out;
+  }
+
+  /** Makes files just added visible to TeX and fontconfig. */
+  private async refresh() {
+    await run("mktexlsr", [join(this.downloads, "..", "..", "..")], { env: this.env() });
+    if (existsSync(this.downloads)) await run("fc-cache", [this.downloads], { env: this.env() });
+    this.known = undefined;
   }
 
   private async inRepository(name: string): Promise<boolean> {
@@ -253,15 +291,50 @@ export class Fonts {
       this.log(`Font "${name}": downloaded Microsoft's core font installer`);
       return { name, source: "microsoft" };
     }
-    const substitute = SUBSTITUTES[key];
+    if (key === "segoe ui" && (await attempt("Selawik's download", () => this.selawik()))) {
+      this.alias(name, SELAWIK.files);
+      this.log(`Font "${name}": using the metric-compatible Selawik`);
+      return { name, source: "substitute", family: "Selawik", note: `${METRIC_NOTE} It covers Latin letters only.` };
+    }
+    const substitute = SUBSTITUTES[key] ?? CLOSE_MATCHES[key];
     const subFiles = substitute ? await attempt(`Google Fonts (${substitute})`, () => this.google(substitute)) : undefined;
     if (substitute && subFiles) {
       this.alias(name, subFiles);
-      this.log(`Font "${name}": using the metric-compatible ${substitute}`);
-      return { name, source: "substitute", family: substitute, note: METRIC_NOTE };
+      this.log(`Font "${name}": using ${substitute}`);
+      return { name, source: "substitute", family: substitute, note: SUBSTITUTES[key] ? METRIC_NOTE : CLOSE_NOTE };
     }
     this.log(`Font "${name}": not in TeX Live, the repository, Google Fonts or Microsoft's core fonts`);
     return { name, source: "missing" };
+  }
+
+  /** Downloads Selawik from Microsoft's release (checked against its checksum; unzip only reads it). */
+  private async selawik(): Promise<boolean> {
+    if (existsSync(join(this.downloads, SELAWIK.files.Regular))) return true;
+    const res = await fetch(SELAWIK.url, { redirect: "follow" });
+    if (!res.ok) throw new Error(`answered ${res.status}`);
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (createHash("sha256").update(bytes).digest("hex") !== SELAWIK.sha256) throw new Error("it does not have the expected checksum");
+    const zip = join(this.work, "selawik.zip");
+    mkdirSync(this.work, { recursive: true });
+    mkdirSync(this.downloads, { recursive: true });
+    writeFileSync(zip, bytes);
+    const r = await run("unzip", ["-oqj", zip, ...Object.values(SELAWIK.files), "-d", this.downloads]);
+    if (r.code !== 0) throw new Error(r.output.slice(-200));
+    this.changed = true;
+    return true;
+  }
+
+  /**
+   * For a font found nowhere: Latin Modern, under the document's name, so the
+   * PDF has its text. Without this, every character of that font is lost.
+   */
+  async lastResort(name: string): Promise<FontOutcome | undefined> {
+    const { family, files } = lastResortFiles(name);
+    if ((await run("kpsewhich", [files.Regular], { env: this.env() })).code !== 0) return undefined;
+    this.alias(name, files);
+    await this.refresh();
+    this.log(`Font "${name}": found nowhere; ${family} stands in so the PDF has its text`);
+    return { name, source: "substitute", family, note: "No font of that name was found anywhere: check its name." };
   }
 
   /** Downloads a Google Fonts family (regular, bold, italic, bold italic as available); file names by style. */

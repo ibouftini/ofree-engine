@@ -1,0 +1,7 @@
+% A font name that exists nowhere: the PDF should still have its text.
+\documentclass{article}
+\usepackage{fontspec}
+\setmainfont{Totally Made Up Font}
+\begin{document}
+This text must survive a font that cannot be found.
+\end{document}

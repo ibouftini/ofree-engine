@@ -12,6 +12,7 @@ import { filesLoadedBy } from "./plan/deps.js";
 import { fingerprint, fontPackage, languagePackages, lineage, requirementTokens, resolvePackages, type Resolution } from "./plan/resolve.js";
 import { chooseMain, findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { Fonts, providable, type FontOutcome } from "./fonts.js";
+import { knownProgram, SystemPrograms } from "./system.js";
 import { annotate, digestText, summaryMarkdown } from "./report.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
 import { closure } from "./tl/tlpdb.js";
@@ -88,36 +89,6 @@ function debianName(pkg: string): string {
   if (/^py3-/.test(pkg)) return `python3-${pkg.slice(4)}`;
   if (/^font-/.test(pkg)) return `fonts-${pkg.slice(5)}`;
   return pkg;
-}
-
-/** Programs documents run that TeX Live does not ship, and the Ubuntu package that has them. */
-const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript", inkscape: "inkscape", gnuplot: "gnuplot-nox", "libglut.so.3": "libglut3.12" };
-
-/** Whether a program or shared library (libglut.so.3) is on this machine. */
-async function systemHas(name: string): Promise<boolean> {
-  if (/\.so(\.\d+)*$/.test(name)) return (await run("ldconfig", ["-p"])).output.includes(name);
-  return (await run(name, ["--version"])).code === 0;
-}
-
-async function installSystemPackages(pkgs: string[]) {
-  core.info(`Installing system packages: ${pkgs.join(" ")}`);
-  // Container jobs often run as root, without sudo.
-  const apt = (args: string[]) =>
-    process.getuid?.() === 0
-      ? run("apt-get", args, { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } })
-      : run("sudo", ["apt-get", ...args], { env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } });
-  const install = (names: string[]) => apt(["install", "-y", "-qq", "--no-install-recommends", ...names]);
-  // The runner's package lists are usually current enough; update only if that fails.
-  let all = await install(pkgs);
-  if (all.code === 0) return;
-  await apt(["update", "-qq"]);
-  all = await install(pkgs);
-  if (all.code === 0) return;
-  // One unknown name should not block the others.
-  for (const p of pkgs) {
-    const r = await install([p]);
-    if (r.code !== 0) core.warning(`System package '${p}' could not be installed; continuing without it.`);
-  }
 }
 
 async function shell(script: string, cwd: string, env: NodeJS.ProcessEnv, what: string) {
@@ -203,18 +174,7 @@ async function main() {
   phases.plan = seconds(t);
 
   // 2. Provision TeX Live: cache first, network only for what is missing.
-  // Programs outside TeX Live (Ghostscript for EPS, Inkscape, gnuplot) are
-  // not on GitHub's runners; install the ones a document needs alongside.
   t = performance.now();
-  const needed = new Map<string, string>();
-  for (const d of docs) for (const [program, why] of d.systemPrograms) if (!needed.has(program)) needed.set(program, `${why.reason} (${why.file}:${why.line})`);
-  const absent = [];
-  for (const [program, why] of needed) {
-    if (!SYSTEM_PROGRAMS[program] || (await systemHas(program))) continue;
-    core.info(`Installing ${SYSTEM_PROGRAMS[program]} alongside TeX Live: ${why}`);
-    absent.push(SYSTEM_PROGRAMS[program]);
-  }
-  const systemInstall = absent.length ? installSystemPackages(absent) : Promise.resolve();
   const arch = texliveArch();
   const texdir = process.env.OFREE_TEXDIR ?? join(homedir(), ".ofree", "texlive");
   const work = join(process.env.RUNNER_TEMP ?? tmpdir(), "ofree");
@@ -224,6 +184,12 @@ async function main() {
   const tl = new TexLive(texdir, arch, work, year);
   tl.log = (m) => core.info(m);
   core.info(`Cache: ${restored.key ? `${restored.exact ? "exact" : "partial"} match ${restored.key}` : "no entry"} (${seconds(t)} s)`);
+  // Programs outside TeX Live (Ghostscript for EPS, Inkscape, gnuplot) come from
+  // a snapshot in the cache, or else the package manager, alongside TeX Live.
+  const system = new SystemPrograms(join(texdir, ".ofree", "system"), join(work, "system"), (m) => core.info(m), (m) => core.warning(m));
+  for (const d of docs) for (const [program, why] of d.systemPrograms) core.info(`${d.root} needs ${program}: ${why.reason} (${why.file}:${why.line})`);
+  const sysPkgs = core.getInput("extra_system_packages").split(/\s+/).filter(Boolean).map(debianName);
+  const systemInstall = system.ensure([...new Set(docs.flatMap((d) => [...d.systemPrograms.keys()]))], sysPkgs);
   let resolution: Resolution | undefined;
   let provisionedFrom = restored.exact && tl.present ? "restored from the cache" : "";
   if (!provisionedFrom) {
@@ -274,6 +240,8 @@ async function main() {
   phases.provision = seconds(t);
 
   await systemInstall;
+  system.commit();
+  if (system.changed) tl.changed = true;
 
   // keep_warm: a scheduled run that only keeps the cached TeX Live alive.
   // GitHub drops cache entries unused for 7 days; restoring one counts as use.
@@ -287,14 +255,13 @@ async function main() {
 
   // 3. Optional user setup (compatibility inputs).
   t = performance.now();
-  const sysPkgs = core.getInput("extra_system_packages").split(/\s+/).filter(Boolean).map(debianName);
-  if (sysPkgs.length) await installSystemPackages(sysPkgs);
   await shell(core.getInput("pre_compile"), workspace, tl.env(), "pre_compile");
   phases.setup = seconds(t);
 
   // 4. Compile, recovering from what the engine can fix itself.
   t = performance.now();
   let direct = resolution ? [...resolution.reasons.keys()] : undefined;
+  const lostFonts = new Map<string, string>();
   const recovery = {
     installMissing: async (missing: Missing[]) => {
       const { db, index } = await tl.database();
@@ -302,10 +269,14 @@ async function main() {
       const roots = new Set<string>();
       const provided: string[] = [];
       for (const m of missing) {
-        if (m.kind === "program" && SYSTEM_PROGRAMS[m.name] && !(await systemHas(m.name))) {
-          await installSystemPackages([SYSTEM_PROGRAMS[m.name]]);
-          if (await systemHas(m.name)) provided.push(`${SYSTEM_PROGRAMS[m.name]} (system)`);
-          continue;
+        if (m.kind === "program" && knownProgram(m.name) && !(await system.has(m.name))) {
+          await system.ensure([m.name]);
+          system.commit();
+          if (system.changed) tl.changed = true;
+          if (await system.has(m.name)) {
+            provided.push(`${m.name} (system)`);
+            continue;
+          }
         }
         if (m.kind === "language") {
           const pkgs = languagePackages(db, index, m.name).filter((p) => !tl.installedPackages().has(p));
@@ -319,9 +290,14 @@ async function main() {
         const state = !pkg ? "no TeX Live package provides it" : tl.installedPackages().has(pkg) ? `${pkg}, already installed` : pkg;
         core.info(`Missing ${m.kind} ${m.name}: ${state}`);
         if (pkg && !tl.installedPackages().has(pkg)) roots.add(pkg);
-        if (!pkg && m.kind === "font" && providable(m.name)) {
-          const [outcome] = await fonts.provide([m.name], microsoftFonts);
-          if (outcome && outcome.source !== "missing" && !fontOutcomes.some((f) => f.name === m.name)) {
+        if (!pkg && m.kind === "font" && providable(m.name) && !fontOutcomes.some((f) => f.name === m.name && f.source !== "missing")) {
+          let outcome: FontOutcome | undefined = (await fonts.provide([m.name], microsoftFonts))[0];
+          // Found nowhere: a PDF with its text in another font beats one with no text. It stays an error.
+          if (!outcome || outcome.source === "missing") {
+            outcome = await fonts.lastResort(m.name);
+            if (outcome) lostFonts.set(m.name, outcome.family ?? "");
+          }
+          if (outcome && outcome.source !== "missing") {
             fontOutcomes.push(outcome);
             provided.push(`font ${m.name}`);
             if (fonts.changed) tl.changed = true;
@@ -373,6 +349,21 @@ async function main() {
   }
   const results = await compileAll(workspace, docs, opts, () => tl.env(), recovery);
   phases.compile = seconds(t);
+  for (const r of results) {
+    for (const [font, used] of lostFonts) {
+      if (!r.notes.some((n) => n.includes(`font ${font}`))) continue;
+      r.diagnosis.errors.unshift({
+        message: `The font "${font}" cannot be found`,
+        source: "fontspec",
+        lines: [],
+        hint: `It is not in TeX Live, the repository, Google Fonts or Microsoft's core fonts, so the PDF uses ${used} instead. Check its name, or add its files to the repository.`,
+      });
+      if (r.status === "ok") {
+        r.status = "errors";
+        r.ok = false;
+      }
+    }
+  }
   for (const r of results) {
     core.info(digestText(r, prefix));
     core.startGroup(`${r.doc.root}: full log`);

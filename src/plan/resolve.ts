@@ -59,6 +59,9 @@ const FONT_ALIASES: Record<string, string> = {
   "tex gyre bonum math": "tex-gyre-math", "tex gyre schola math": "tex-gyre-math", "tex gyre dejavu math": "tex-gyre-math",
   // Not in TeX Live; IPAex, which is, stands in (see fonts.ts).
   ipamincho: "ipaex", ipapmincho: "ipaex", ipagothic: "ipaex", ipapgothic: "ipaex",
+  // Not in TeX Live; TeX Gyre, which is, stands in (see fonts.ts).
+  palatino: "tex-gyre", "palatino linotype": "tex-gyre", "book antiqua": "tex-gyre", bookman: "tex-gyre", "bookman old style": "tex-gyre",
+  "century schoolbook": "tex-gyre", helvetica: "tex-gyre", "helvetica neue": "tex-gyre", times: "tex-gyre", courier: "tex-gyre", "avant garde": "tex-gyre",
   simsun: "fandol", nsimsun: "fandol", "simsun.ttc": "fandol", simhei: "fandol", "simhei.ttf": "fandol", kaiti: "fandol",
   "simkai.ttf": "fandol", fangsong: "fandol", "simfang.ttf": "fandol", "microsoft yahei": "fandol", "msyh.ttc": "fandol",
 };
