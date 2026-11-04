@@ -4,7 +4,8 @@
 // earlier one folded into it; and the warnings worth reading, grouped
 // (undefined references and citations, characters a font lacks).
 
-import { hintFor } from "./hints.js";
+import { stripComments } from "../plan/scan.js";
+import { hintFor, NOT_MATH } from "./hints.js";
 import { unbreakLines } from "./logparse.js";
 
 export interface Issue {
@@ -21,12 +22,20 @@ export interface Issue {
   hint?: string;
 }
 
+/** A place in the sources, with the file relative to the compile directory. */
+export interface Place {
+  file: string;
+  line: number;
+}
+
 export interface Diagnosis {
   errors: Issue[];
-  /** Undefined \ref labels, with the lines that use them. */
-  references: { key: string; lines: number[] }[];
+  /** TeX gave up (a missing package or input file), so nothing after the last error was checked. */
+  stoppedEarly: boolean;
+  /** Undefined \ref labels, with the lines that use them and the files, where the sources show them. */
+  references: { key: string; lines: number[]; places?: Place[] }[];
   /** Undefined citations; `missing` when no .bib file has the key. */
-  citations: { key: string; lines: number[]; missing: boolean }[];
+  citations: { key: string; lines: number[]; missing: boolean; places?: Place[] }[];
   /** Characters a font has no glyph for (they are blank in the PDF). */
   glyphs: { char: string; font: string; count: number }[];
   /** Other warnings, without duplicates or rerun notices. */
@@ -40,6 +49,8 @@ export interface SourceContext {
   sources: () => { file: string; text: string }[];
   /** Project files whose name differs only by case or extension, relative to the compile directory. */
   similarFiles: (name: string) => string[];
+  /** Where the sources load a file, as the scanner found it. */
+  required?: (name: string) => Place | undefined;
 }
 
 const NO_CONTEXT: SourceContext = { sources: () => [], similarFiles: () => [] };
@@ -122,7 +133,8 @@ function readErrors(lines: string[], workspaceFile: (f: string) => string | unde
     let culprit: string | undefined;
     if (/^Undefined control sequence/.test(message)) culprit = lastCommand(argument ?? "") ?? lastCommand(stopped ?? "");
     else if (runaway) culprit = runaway.replace(/^\{/, "").split(/\\par\b/)[0].trim().slice(0, 60);
-    else if (stopped && CONTEXT_HELPS.test(message)) culprit = stopped.replace(/^\.\.\./, "").trim().slice(-50) || undefined;
+    // TeX writes a tab or a line end as ^^I or ^^M.
+    else if (stopped && CONTEXT_HELPS.test(message)) culprit = stopped.replace(/^\.\.\./, "").replace(/\^\^[IJM]/g, " ").trim().slice(-50) || undefined;
 
     const rel = file ? workspaceFile(file) : undefined;
     out.push({ message, source, file: rel, line, culprit, external: file !== undefined && rel === undefined });
@@ -138,6 +150,8 @@ function foldConsequences(errors: RawError[]): RawError[] {
     out.push(e);
     // TeX reports "Missing $ inserted" twice: where math starts, and again where it ends it.
     if (/^Missing \$ inserted/.test(e.message) && /^Missing \$ inserted/.test(errors[i + 1]?.message ?? "")) i++;
+    // "Command \item invalid in math mode" is followed by TeX ending the math there.
+    if (/invalid in math mode/.test(e.message) && /^Missing \$ inserted/.test(errors[i + 1]?.message ?? "") && errors[i + 1].line === e.line) i++;
     // An undefined environment: what follows up to its \end is noise ("Misplaced alignment tab", "ended by \end{align}").
     const env = /^Environment (\S+) undefined/.exec(e.message)?.[1];
     if (env) {
@@ -159,6 +173,43 @@ function locate(text: string, ctx: SourceContext): { file: string; line: number 
     const flat = s.text.replace(/[ \t]+/g, " ");
     const at = flat.indexOf(needle);
     if (at >= 0) return { file: s.file, line: flat.slice(0, at).split("\n").length };
+  }
+  return undefined;
+}
+
+/**
+ * The line that opens math it never closes: an odd number of $ at or before
+ * `line`, without crossing a blank line, which math cannot do either.
+ */
+function unclosedMath(file: string, line: number, ctx: SourceContext): { line: number; text: string } | undefined {
+  const lines = ctx.sources().find((s) => s.file === file)?.text.split("\n");
+  if (!lines) return undefined;
+  for (let n = line; n >= 1 && line - n <= 8; n--) {
+    const text = stripComments(lines[n - 1] ?? "");
+    if (n < line && !text.trim()) return undefined;
+    if ((text.replace(/\\[\\$]/g, "").match(/\$/g) ?? []).length % 2 === 1) return { line: n, text: text.trim().slice(-50) };
+  }
+  return undefined;
+}
+
+/** Where the sources use a citation key or label: the log has a line but no file, and a multi-line argument ends after it starts. */
+function usedAt(key: string, lines: number[], ctx: SourceContext): Place[] | undefined {
+  const name = new RegExp(`(?<![\\w:-])${key.replace(/[.*+?^\${}()|[\]\\]/g, "\\$&")}(?![\\w:-])`);
+  const sources = ctx.sources().map((s) => ({ file: s.file, lines: s.text.split("\n") }));
+  const places: Place[] = [];
+  for (const line of lines) {
+    let found: Place | undefined;
+    for (let back = 0; back <= 3 && !found; back++) {
+      const s = sources.find((x) => name.test(stripComments(x.lines[line - 1 - back] ?? "")));
+      if (s) found = { file: s.file, line: line - back };
+    }
+    if (found) places.push(found);
+  }
+  if (places.length) return places;
+  // Not reported at any line (BibTeX found no entry for it): the first use.
+  for (const s of sources) {
+    const at = s.lines.findIndex((l) => name.test(stripComments(l)));
+    if (at >= 0) return [{ file: s.file, line: at + 1 }];
   }
   return undefined;
 }
@@ -244,6 +295,14 @@ export function diagnose(
       const at = locate(e.culprit, ctx);
       if (at) [e.file, e.line] = [at.file, at.line];
     }
+    // TeX stops to ask for another name, so a missing package has no place in the log.
+    const absent = !e.file && /^File [`'‘]([^'’]+)['’] not found/.exec(e.message)?.[1];
+    const loaded = absent ? ctx.required?.(absent) : undefined;
+    if (loaded) [e.file, e.line] = [loaded.file, loaded.line];
+    // Math left open is reported where TeX gave up on it, not where the mistake is.
+    const leftOpen = /invalid in math mode/.test(e.message) || (/^Missing \$ inserted/.test(e.message) && (!e.culprit || NOT_MATH.test(e.culprit)));
+    const open = leftOpen && e.file && e.line ? unclosedMath(e.file, e.line, ctx) : undefined;
+    if (open) [e.message, e.line, e.culprit] = ["Math opened with `$` is never closed", open.line, open.text];
   }
   const bib = readableLog(blg).split("\n");
   for (let i = 0; i < bib.length; i++) {
@@ -301,8 +360,9 @@ export function diagnose(
 
   return {
     errors,
-    references: [...refs].map(([key, g]) => ({ key, lines: g.lines })),
-    citations: [...cites].map(([key, g]) => ({ key, lines: g.lines, missing: notInBib.has(key) })),
+    stoppedEarly: /Emergency stop\.|Fatal error occurred/.test(text),
+    references: [...refs].map(([key, g]) => ({ key, lines: g.lines, places: usedAt(key, g.lines, ctx) })),
+    citations: [...cites].map(([key, g]) => ({ key, lines: g.lines, missing: notInBib.has(key), places: usedAt(key, g.lines, ctx) })),
     glyphs: [...glyphs.values()],
     warnings: [...warnings].slice(0, 15),
     overfull: (text.match(/^Overfull \\[hv]box/gm) ?? []).length,

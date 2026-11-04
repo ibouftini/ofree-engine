@@ -10,6 +10,78 @@ const log = (name: string) => readFileSync(join(import.meta.dirname, "fixtures",
 const summary = (d: ReturnType<typeof diagnose>) => d.errors.map((e) => `${e.file ?? "-"}:${e.lines.join(",")} ${e.message}${e.culprit ? ` [${e.culprit}]` : ""}`);
 
 describe("diagnose", () => {
+  // Real log excerpts from a thesis class with mistakes planted in it.
+  const source = (file: string, text: string): SourceContext => ({ sources: () => [{ file, text }], similarFiles: () => [] });
+
+  it("places a missing package where the sources load it, and says TeX stopped there", () => {
+    const text = [
+      ") (./Preamble/preamble.tex", "", "! LaTeX Error: File `nosuchpackage.sty' not found.", "",
+      "Type X to quit or <RETURN> to proceed,", "or enter new name. (Default extension: sty)", "", "Enter file name: ",
+      "./Preamble/preamble.tex:22: Emergency stop.", "<read *> ", "         ", "l.22 ^^M", "        ", "No pages of output.",
+    ].join("\n");
+    const ctx: SourceContext = { ...source("x.tex", ""), required: (n) => (n === "nosuchpackage.sty" ? { file: "Preamble/preamble.tex", line: 19 } : undefined) };
+    const d = diagnose(text, "", ctx);
+    expect(summary(d)).toEqual(["Preamble/preamble.tex:19 File `nosuchpackage.sty' not found."]);
+    expect(d.errors[0].hint).toContain("No TeX Live package provides");
+    expect(d.stoppedEarly).toBe(true);
+    expect(diagnose("./main.tex:3: Undefined control sequence.\nl.3 \\foo\n").stoppedEarly).toBe(false);
+  });
+
+  const unclosed = [
+    "./A/a.tex:30: LaTeX Error: Command \\item invalid in math mode.", "",
+    "See the LaTeX manual or LaTeX Companion for explanation.", "Type  H <return>  for immediate help.",
+    " ...  LaTeX Error: Command \\protect \\item  invalid in math mode.^^J", "       ",
+    "l.30 \\item", "          ^^ITo add a new package go to Start",
+    "./A/a.tex:30: Missing $ inserted.", "<inserted text> ", "                $", "l.30 \\item^^IT", "              o add a new package",
+  ].join("\n");
+
+  it("reports math left open once, on the line that opens it", () => {
+    const lines = Array.from({ length: 28 }, () => "x");
+    const d = diagnose(unclosed, "", source("A/a.tex", [...lines, "\\item\tRun the installer and pay $5 for it", "\\item\tTo add a new package"].join("\n")));
+    expect(summary(d)).toEqual(["A/a.tex:29 Math opened with `$` is never closed [\\item\tRun the installer and pay $5 for it]"]);
+    expect(d.errors[0].hint).toContain("`\\$` for a dollar sign");
+  });
+
+  it("does not blame an escaped or closed $, or cross a blank line", () => {
+    const at = (text: string) => summary(diagnose(unclosed, "", source("A/a.tex", `${"x\n".repeat(27)}${text}\n\\item b`)));
+    expect(at("a $5\n\n\\item")).toHaveLength(1);
+    for (const text of ["cost \\$5 here\nmore", "$x$ and $y$\nmore", "$5\n\nmore", "% $5 in a comment\nmore"]) {
+      const s = at(text);
+      expect(s).toEqual(["A/a.tex:30 Command \\item invalid in math mode."]);
+    }
+    expect(diagnose(unclosed).errors[0].hint).toContain("`\\item` cannot be used in math");
+  });
+
+  it("tells math outside $ from math left open", () => {
+    const missing = (stopped: string, text: string) => diagnose(`./m.tex:2: Missing $ inserted.\n<inserted text> \n     $\nl.2 ${stopped}\n   rest\n`, "", source("m.tex", text)).errors[0];
+    expect(missing("The error scales with x^", "a\nThe error scales with x^2").hint).toContain("outside math mode");
+    expect(missing("\\end{itemize}", "pay $5\n\\end{itemize}").message).toBe("Math opened with `$` is never closed");
+    expect(missing("\\end{itemize}", "pay 5\n\\end{itemize}").hint).toContain("still in math");
+  });
+
+  it("finds where undefined keys are used, in the file that has them", () => {
+    const text = [
+      "Package natbib Warning: Citation `Smith2099' on page 12 undefined on input line 42.", "",
+      "LaTeX Warning: Reference `sec:nosuch' on page 12 undefined on input line 49.", "",
+      "LaTeX Warning: Reference `multi' on page 12 undefined on input line 5.", "",
+      "LaTeX Warning: Reference `elsewhere' on page 1 undefined on input line 900.", "",
+    ].join("\n");
+    const chapter = Array.from({ length: 60 }, () => "x");
+    chapter[41] = "see \\cite{Smith2099}";
+    chapter[48] = "% \\ref{sec:nosuch} old\nsee \\ref{sec:nosuch}".split("\n")[1];
+    chapter[3] = "\\ref{multi}";
+    chapter[10] = "\\ref{elsewhere}";
+    chapter[20] = "not sec:nosuch2 or xSmith2099";
+    const ctx: SourceContext = {
+      sources: () => [{ file: "main.tex", text: "\\documentclass{x}\n" }, { file: "Ch/c.tex", text: chapter.join("\n") }],
+      similarFiles: () => [],
+    };
+    const d = diagnose(text, "", ctx);
+    expect(d.citations[0].places).toEqual([{ file: "Ch/c.tex", line: 42 }]);
+    expect(d.references.map((r) => r.places)).toEqual([[{ file: "Ch/c.tex", line: 49 }], [{ file: "Ch/c.tex", line: 4 }], [{ file: "Ch/c.tex", line: 11 }]]);
+    expect(diagnose(text).references[0].places).toBeUndefined();
+  });
+
   it("lists each real error once, with where TeX stopped, and folds the errors that follow from it", () => {
     const ctx: SourceContext = { sources: () => [], similarFiles: (n) => (n === "figures/missing.png" ? ["figures/Missing.PNG"] : []) };
     const d = diagnose(log("overleaf-errors.log"), log("overleaf-errors.blg"), ctx);

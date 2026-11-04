@@ -3,7 +3,7 @@
 import * as core from "@actions/core";
 import { posix } from "node:path";
 import { ENGINE_NAME, type DocumentResult } from "./compile/compile.js";
-import type { Issue } from "./compile/diagnose.js";
+import type { Issue, Place } from "./compile/diagnose.js";
 import type { FontOutcome } from "./fonts.js";
 import type { Resolution } from "./plan/resolve.js";
 
@@ -50,6 +50,14 @@ function describe(e: Issue): string {
 /** Errors become workflow annotations on the file and line (warnings when the step is not to fail on them). */
 export function annotate(results: DocumentResult[], onError: "fail" | "warn", prefix: string) {
   for (const r of results) {
+    // Undefined keys print ?? or [?] in the PDF of an otherwise fine build, so they are marked on their lines too.
+    const keys = r.doc.main ? [["reference", r.diagnosis.references], ["citation", r.diagnosis.citations]] as const : [];
+    for (const [what, items] of keys) {
+      for (const x of items.slice(0, 5)) {
+        const at = x.places?.[0];
+        if (at) core.warning(`Undefined ${what}: ${x.key}`, { title: `Undefined ${what}`, file: repoPath(r, at.file, prefix), startLine: at.line });
+      }
+    }
     if (r.status === "ok") continue;
     const report = !r.doc.main || (r.status === "errors" && onError === "warn") ? core.warning : core.error;
     const errors = r.diagnosis.errors.slice(0, 10);
@@ -76,8 +84,10 @@ export function digestText(r: DocumentResult, prefix: string): string {
     out.push(`  ✗ ${where} ${describe(e)}`.trimEnd());
     if (e.hint) out.push(`      ${plain(e.hint)}`);
   }
-  if (d.references.length) out.push(`  ! Undefined references: ${d.references.map((x) => x.key).join(", ")}`);
-  if (d.citations.length) out.push(`  ! Undefined citations: ${d.citations.map((x) => x.key + (x.missing ? " (not in the .bib files)" : "")).join(", ")}`);
+  const at = (x: { places?: Place[] }) => (x.places?.length ? ` at ${x.places.map((p) => `${repoPath(r, p.file, prefix)}:${p.line}`).join(", ")}` : "");
+  if (d.stoppedEarly) out.push(`  TeX stopped here, so the rest of the document was not checked.`);
+  if (d.references.length) out.push(`  ! Undefined references: ${d.references.map((x) => x.key + at(x)).join(", ")}`);
+  if (d.citations.length) out.push(`  ! Undefined citations: ${d.citations.map((x) => x.key + (x.missing ? " (not in the .bib files)" : "") + at(x)).join(", ")}`);
   for (const g of d.glyphs) out.push(`  ! The font ${g.font} has no ${g.char} (${g.count}×, blank in the PDF)`);
   return out.join("\n");
 }
@@ -96,11 +106,17 @@ function documentSection(r: DocumentResult, prefix: string): string[] {
     });
     if (n > 10) lines.push(`\n…and ${n - 10} more in the log of this step.`);
     lines.push("");
+    if (d.stoppedEarly) lines.push(`TeX stopped at this error, so the rest of the document was not checked. Fixing it may show more errors${r.status === "failed" ? ", and there is no PDF until then" : ""}.`, "");
   }
   const notes: string[] = [];
-  if (d.references.length) notes.push(`**Undefined references** (\`??\` in the PDF): ${d.references.slice(0, 10).map((x) => code(x.key)).join(", ")}`);
+  const at = (x: { places?: Place[] }) => {
+    if (!x.places?.length) return "";
+    const [first, ...rest] = x.places;
+    return ` at ${sourceLink(repoPath(r, first.file, prefix), first.line)}${rest.length ? ` and ${rest.length} more` : ""}`;
+  };
+  if (d.references.length) notes.push(`**Undefined references** (\`??\` in the PDF): ${d.references.slice(0, 10).map((x) => code(x.key) + at(x)).join(", ")}`);
   if (d.citations.length) {
-    notes.push(`**Undefined citations**: ${d.citations.slice(0, 10).map((x) => code(x.key) + (x.missing ? " (not in the .bib files)" : "")).join(", ")}`);
+    notes.push(`**Undefined citations**: ${d.citations.slice(0, 10).map((x) => code(x.key) + (x.missing ? " (not in the .bib files)" : "") + at(x)).join(", ")}`);
   }
   if (d.glyphs.length) notes.push(`**Characters the font lacks** (blank in the PDF): ${d.glyphs.slice(0, 8).map((g) => `${esc(g.char)} in ${esc(g.font)} (${g.count}×)`).join(", ")}`);
   if (notes.length) {
@@ -137,7 +153,7 @@ export function summaryMarkdown(f: RunFacts): string {
   } else if (f.mainReason === "no main document is marked, so all count") {
     lines.push(`Several documents were found and none is marked as the main one, so each must build. To build only one, set \`root_file\`, or start the files it includes with \`% !TeX root = main.tex\`.`, "");
   }
-  lines.push(`Built in ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
+  lines.push(`${failed.length === mains.length ? "Stopped after" : "Built in"} ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
     (f.artifactUrl ? ` [Download the PDF${f.results.length > 1 ? "s" : ""}](${f.artifactUrl})` : ""));
   lines.push("");
   lines.push("| Document | Engine | Pages | Result | Time |");
@@ -157,7 +173,7 @@ export function summaryMarkdown(f: RunFacts): string {
   for (const r of f.results) lines.push(...documentSection(r, f.prefix));
 
   lines.push("<details><summary>How this was built</summary>", "");
-  lines.push(`- TeX Live ${f.release || "?"}: ${f.provisionedFrom}; ${f.packageCount} packages installed.`);
+  lines.push(`- TeX Live ${f.release || "?"}: ${f.provisionedFrom}; ${f.packageCount} packages in all.`);
   if (f.downloadedPackages) lines.push(`- Downloaded ${f.downloadedPackages} packages (${f.downloadedMiB.toFixed(1)} MiB) from \`${f.mirror ?? "?"}\`.`);
   lines.push(`- Time: ${Object.entries(f.phases).map(([k, v]) => `${k} ${v.toFixed(1)} s`).join(" · ")}.`);
   for (const r of f.results) {

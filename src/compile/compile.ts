@@ -292,6 +292,10 @@ export async function compileDocument(
         }
       }),
     similarFiles: (name) => similarFiles(cwdAbs, name),
+    required: (name) => {
+      const ref = doc.requires.get(name);
+      return ref && { file: relative(cwdAbs, join(workspace, ref.file)), line: ref.line };
+    },
   };
   // Files in the log are relative to the compile directory, or absolute (TeX Live's own files).
   const inProject = (f: string) => {

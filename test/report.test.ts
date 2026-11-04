@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DocumentResult } from "../src/compile/compile.js";
-import { summaryMarkdown, type RunFacts } from "../src/report.js";
+import { digestText, summaryMarkdown, type RunFacts } from "../src/report.js";
 
 const result = (runOutput: string, bibTool: "biber" | "bibtex" | null): DocumentResult => ({
   doc: { root: "main.tex", cwd: ".", engine: "pdflatex", engineReason: "default", main: true, bibTool, shellEscape: null, languages: new Map(), locales: new Map() },
@@ -15,7 +15,7 @@ const result = (runOutput: string, bibTool: "biber" | "bibtex" | null): Document
   installed: [],
   notes: [],
   findings: {},
-  diagnosis: { errors: [], references: [], citations: [], glyphs: [], warnings: [], overfull: 0, underfull: 0 },
+  diagnosis: { errors: [], stoppedEarly: false, references: [], citations: [], glyphs: [], warnings: [], overfull: 0, underfull: 0 },
   output: runOutput,
   runOutput,
 } as unknown as DocumentResult);
@@ -36,6 +36,18 @@ describe("summary", () => {
     const s = summaryMarkdown(facts(result("", null), [{ name: "XITSMath-Regular", source: "missing" }, { name: "Roboto", source: "google" }]));
     expect(s).not.toContain("XITSMath");
     expect(s).toContain("Roboto (downloaded from Google Fonts)");
+  });
+
+  it("says where undefined keys are used, and when TeX stopped early", () => {
+    const r = result("", null);
+    r.diagnosis = { ...r.diagnosis, stoppedEarly: true, references: [{ key: "sec:x", lines: [49], places: [{ file: "Ch/c.tex", line: 49 }] }], citations: [{ key: "Smith", lines: [42], missing: true, places: [{ file: "Ch/c.tex", line: 42 }, { file: "Ch/d.tex", line: 7 }] }] };
+    r.status = "failed";
+    const s = summaryMarkdown(facts(r));
+    expect(s).toContain("`sec:x` at `Ch/c.tex:49`");
+    expect(s).toContain("`Smith` (not in the .bib files) at `Ch/c.tex:42` and 1 more");
+    expect(s).toContain("TeX stopped at this error, so the rest of the document was not checked. Fixing it may show more errors, and there is no PDF until then.");
+    expect(s).toContain("Stopped after 1.0 s");
+    expect(digestText(r, "")).toContain("Smith (not in the .bib files) at Ch/c.tex:42, Ch/d.tex:7");
   });
 
   it("uses the singular for one PDF", () => {

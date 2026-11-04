@@ -34,6 +34,9 @@ const ENV_DEFINED_BY: Record<string, string> = {
   comment: "comment", appendices: "appendix", tcolorbox: "tcolorbox", mdframed: "mdframed", circuitikz: "circuitikz",
 };
 
+/** Text that cannot be math: reaching it in math means math was left open. */
+export const NOT_MATH = /\\(?:item|end\b|begin\b|par\b|(?:sub)*section|chapter|caption)/;
+
 const loadHint = (pkg: string | undefined, what: string) =>
   pkg ? `${what} comes from the **${pkg}** package: add \`\\usepackage{${pkg.split(" ")[0]}}\` to the preamble.` : undefined;
 
@@ -48,8 +51,14 @@ const RULES: Rule[] = [
   [/Environment (\S+) undefined/, (m) =>
     loadHint(ENV_DEFINED_BY[m[1]], `The \`${m[1]}\` environment`) ??
     `The \`${m[1]}\` environment is not defined: check its spelling, or load the package that defines it.`],
-  [/^Missing \$ inserted/, () =>
-    "Math (`^`, `_`, `\\alpha`, …) is used outside math mode: put it between `$…$`. A blank line inside an equation also causes this."],
+  [/^Math opened with/, () =>
+    "TeX reads on as math until something cannot be math, so the text after it looks wrong too. Add the closing `$`, or write `\\$` for a dollar sign."],
+  [/^Missing \$ inserted/, (_m, i) =>
+    !i.culprit || NOT_MATH.test(i.culprit)
+      ? "TeX was still in math here: a `$` before this line is probably not closed, or an equation has a blank line in it."
+      : "Math (`^`, `_`, `\\alpha`, …) is used outside math mode: put it between `$…$`. A blank line inside an equation also causes this."],
+  [/^Command (\\\S+) invalid in math mode/, (m) =>
+    `\`${m[1]}\` cannot be used in math. If this line is not meant to be math, a \`$\` before it is probably not closed.`],
   [/^Extra alignment tab has been changed/, () => "This table row has more `&` than the table has columns."],
   [/^Misplaced alignment tab character/, () =>
     "An `&` outside a table or alignment. Write `\\&` for an ampersand in text; in equations, use an environment such as `align` (amsmath)."],
@@ -63,7 +72,7 @@ const RULES: Rule[] = [
     const alt = similar(name);
     if (alt.length) return `There is no \`${name}\`, but there is \`${alt[0]}\`: check the folder and the extension.`;
     if (/\.(sty|cls)$/.test(name)) return `No TeX Live package provides \`${name}\`: check its name, or add the file to the repository.`;
-    return `\`${name}\` is not in the repository at this path. Paths are relative to the main document; check that the file is committed.`;
+    return `\`${name}\` is not in the repository at this path. Paths are relative to the main document or a \`\\graphicspath\` folder; check the name, and that the file is committed.`;
   }],
   [/Unicode character (\S+) \(U\+([0-9A-F]+)\)/, (m) =>
     `pdfLaTeX cannot typeset ${m[1]}. Compile with XeLaTeX or LuaLaTeX (add \`% !TeX program = xelatex\` as the first line) with a font that has it, or replace the character with a LaTeX command.`],
