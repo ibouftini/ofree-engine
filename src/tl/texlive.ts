@@ -6,7 +6,7 @@ import { copyFileSync, existsSync, linkSync, mkdirSync, readFileSync, readdirSyn
 import { delimiter, join } from "node:path";
 import type { Engine } from "../plan/scan.js";
 import { Mutex, run, seconds } from "../util/exec.js";
-import { downloadAll, fetchBytes, rankMirrors, sha512, tlnetCandidates, tlpdbRevision } from "./net.js";
+import { downloadAll, fetchBytes, NetworkError, rankMirrors, sha512, tlnetCandidates, tlpdbRevision } from "./net.js";
 import { buildFileIndex, closure, parseTlpdb, type Tlpdb } from "./tlpdb.js";
 
 export function texliveArch(): string {
@@ -174,10 +174,13 @@ export class TexLive {
   /** The package database and file index, fetched once per run from one mirror. */
   async database(): Promise<{ db: Tlpdb; index: Map<string, string> }> {
     if (this.db && this.index) return { db: this.db, index: this.index };
-    let ranked = await rankMirrors(tlnetCandidates(this.year));
+    const failures = new Map<string, string>();
+    let ranked = await rankMirrors(tlnetCandidates(this.year), 3, failures);
     // The current year is not in the historic archive until it is frozen.
-    if (ranked.length === 0 && this.year) ranked = await rankMirrors(tlnetCandidates());
-    if (ranked.length === 0) throw new Error("No TeX Live repository answered");
+    if (ranked.length === 0 && this.year) ranked = await rankMirrors(tlnetCandidates(), 3, failures);
+    if (ranked.length === 0) {
+      throw new NetworkError(`No TeX Live repository answered: ${[...failures].map(([url, why]) => `${new URL(url).host} (${why})`).join(", ")}`);
+    }
 
     // Mirrors lag behind each other by a day or more, and tlmgr refuses a
     // repository older than the installation. Read the database of the few
@@ -206,7 +209,7 @@ export class TexLive {
     try {
       await Promise.any(tasks);
     } catch {
-      throw new Error(`Could not read the package database from ${ranked.join(", ")}`);
+      throw new NetworkError(`Could not read the package database from ${ranked.join(", ")}`);
     }
     // Give the other mirrors a short grace period; never wait for a slow one.
     await Promise.race([Promise.allSettled(tasks), new Promise((r) => setTimeout(r, 2000))]);

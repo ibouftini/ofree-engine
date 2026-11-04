@@ -1,0 +1,44 @@
+name: Check proxy
+
+# Behind a proxy, as on a self-hosted runner in a company network: everything
+# the action downloads goes through HTTPS_PROXY.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  proxy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Start a proxy that logs the hosts it tunnels to
+        run: |
+          cat > "$RUNNER_TEMP/proxy.mjs" <<'JS'
+          import { createServer } from "node:http";
+          import { connect } from "node:net";
+          createServer().on("connect", (req, client, head) => {
+            console.log(req.url);
+            const [host, port] = req.url.split(":");
+            const server = connect(Number(port), host, () => {
+              client.write("HTTP/1.1 200 OK\r\n\r\n");
+              server.write(head);
+              server.pipe(client);
+              client.pipe(server);
+            });
+            server.on("error", () => client.destroy());
+            client.on("error", () => server.destroy());
+          }).listen(3128, "127.0.0.1");
+          JS
+          nohup node "$RUNNER_TEMP/proxy.mjs" > "$RUNNER_TEMP/tunnels.log" 2>&1 &
+          sleep 1
+      - uses: ./
+        env:
+          HTTPS_PROXY: http://127.0.0.1:3128
+        with:
+          working_directory: bench/samples/paper
+          cache: false
+      - name: TeX Live came through the proxy
+        run: |
+          sort -u "$RUNNER_TEMP/tunnels.log"
+          grep -qE 'mirror|ctan' "$RUNNER_TEMP/tunnels.log"
+          test -s bench/samples/paper/main.pdf

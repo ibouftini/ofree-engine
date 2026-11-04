@@ -152,8 +152,8 @@ export interface Roots {
  *   - the main documents are the targets of "% !TeX root" comments, else the
  *     files a .latexmkrc lists in @default_files, else main.tex, else the only
  *     document left once standalone figures are set aside;
- *   - with no such sign, every document is a main one: guessing could let a
- *     broken main document pass as a draft.
+ *   - with no such sign, every document but the standalone figures is a main
+ *     one: guessing could let a broken main document pass as a draft.
  */
 export function chooseMain(workspace: string, files: string[], candidates: string[]): Roots {
   const head = (f: string) => readFileSync(join(workspace, f), "utf8").split("\n").slice(0, 30).join("\n");
@@ -191,7 +191,8 @@ export function chooseMain(workspace: string, files: string[], candidates: strin
   const isFigure = (f: string) => /\\documentclass\s*(?:\[[^\]]*\])?\s*\{standalone\}/.test(stripComments(head(f)));
   const documents = pool.filter((f) => !isFigure(f));
   if (documents.length === 1) return pick(documents, pool.length > 1 ? "the only document that is not a standalone figure" : "the only document");
-  return { main: pool, others: [], reason: pool.length > 1 ? "no main document is marked, so all count" : "the only document" };
+  const main = documents.length ? documents : pool;
+  return pick(main, main.length > 1 ? "no main document is marked, so all count" : "the only document");
 }
 
 const ENGINE_DIRECTIVE = /^\s*%\s*!\s*TEX\s+(?:TS-)?program\s*=\s*(\w+)/im;

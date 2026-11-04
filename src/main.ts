@@ -13,10 +13,12 @@ import { fingerprint, fontPackage, languagePackages, lineage, requirementTokens,
 import { chooseMain, findRoots, listTexFiles, planDocument, type DocumentPlan, type Engine } from "./plan/scan.js";
 import { Fonts, providable, type FontOutcome } from "./fonts.js";
 import { knownProgram, SystemPrograms } from "./system.js";
-import { annotate, digestText, summaryMarkdown } from "./report.js";
+import { annotate, digestText, fatalMarkdown, NETWORK_HINT, summaryMarkdown } from "./report.js";
+import { NetworkError } from "./tl/net.js";
 import { TexLive, texliveArch } from "./tl/texlive.js";
 import { closure } from "./tl/tlpdb.js";
 import { run, seconds } from "./util/exec.js";
+import { useProxyFromEnv } from "./util/proxy.js";
 
 const bool = (name: string) => /^(true|yes|1|on)$/i.test(core.getInput(name).trim());
 const list = (name: string) =>
@@ -151,6 +153,7 @@ function metafontKit(font: string): string[] {
 }
 
 async function main() {
+  await useProxyFromEnv();
   const phases: Record<string, number> = {};
   let t = performance.now();
   const repository = process.env.GITHUB_WORKSPACE ?? process.cwd();
@@ -170,7 +173,7 @@ async function main() {
   const extraPackages = list("extra_packages");
   const tokens = [...requirementTokens(docs, extraPackages), ...(year ? [`texlive:${year}`] : [])].sort();
   const fp = fingerprint(tokens);
-  for (const d of docs) core.info(`${d.root}: ${d.engine} (${d.engineReason}); ${d.requires.size} files required`);
+  for (const d of docs) core.info(`${d.root}: ${d.engine} (${d.engineReason}); ${d.requires.size} file${d.requires.size === 1 ? "" : "s"} required`);
   phases.plan = seconds(t);
 
   // 2. Provision TeX Live: cache first, network only for what is missing.
@@ -217,7 +220,7 @@ async function main() {
   await tl.ensureFontconfig();
   const extraFonts = list("extra_fonts").flatMap((p) => globSync(p, { cwd: workspace }).map((f) => join(workspace, f)));
   const registered = await fonts.registerRepository(workspace, extraFonts);
-  if (registered) core.info(`Registered ${registered} font file(s) from the repository`);
+  if (registered) core.info(`Registered ${registered} font file${registered === 1 ? "" : "s"} from the repository`);
   const microsoftFonts = core.getInput("microsoft_fonts") !== "false";
   const named = [...new Set(docs.flatMap((d) => [...d.fonts.keys()]))].filter(providable);
   const fontOutcomes: FontOutcome[] = await fonts.provide(named, microsoftFonts);
@@ -445,4 +448,10 @@ function lastLines(text: string, size = 20_000): string {
   return text.length <= size ? text : text.slice(text.indexOf("\n", text.length - size) + 1);
 }
 
-main().catch((err) => core.setFailed(err instanceof Error ? err.message : String(err)));
+main().catch(async (err) => {
+  // The summary is where users look, and this run has not written one.
+  const message = err instanceof Error ? err.message : String(err);
+  const hint = err instanceof NetworkError ? NETWORK_HINT : undefined;
+  core.setFailed(hint ? `${message}\n${hint}` : message);
+  if (process.env.GITHUB_STEP_SUMMARY) await core.summary.addRaw(fatalMarkdown(message, hint)).write().catch(() => undefined);
+});

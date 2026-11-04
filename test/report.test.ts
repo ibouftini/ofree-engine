@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentResult } from "../src/compile/compile.js";
-import { digestText, summaryMarkdown, type RunFacts } from "../src/report.js";
+import { digestText, fatalMarkdown, summaryMarkdown, type RunFacts } from "../src/report.js";
 
 const result = (runOutput: string, bibTool: "biber" | "bibtex" | null): DocumentResult => ({
   doc: { root: "main.tex", cwd: ".", engine: "pdflatex", engineReason: "default", main: true, bibTool, shellEscape: null, languages: new Map(), locales: new Map() },
@@ -90,5 +90,14 @@ describe("summary", () => {
 
   it("uses the singular for one PDF", () => {
     expect(summaryMarkdown(facts(result("", null)))).toContain("## ✅ Your PDF is ready");
+  });
+});
+
+describe("fatalMarkdown", () => {
+  it("states the problem and what to try", () => {
+    const text = fatalMarkdown("No TeX Live repository answered: a (ENOTFOUND)", "Re-run the job.");
+    expect(text).toContain("## ❌ The build stopped");
+    expect(text).toContain("**No TeX Live repository answered: a (ENOTFOUND)**");
+    expect(text).toContain("Re-run the job.");
   });
 });

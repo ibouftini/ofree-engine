@@ -82,7 +82,7 @@ export function annotate(results: DocumentResult[], onError: "fail" | "warn", pr
 export function digestText(r: DocumentResult, prefix: string): string {
   const d = r.diagnosis;
   const out: string[] = [];
-  const head = r.status === "ok" ? "built" : r.status === "errors" ? `PDF built through ${d.errors.length} LaTeX error(s)` : "could not be built";
+  const head = r.status === "ok" ? "built" : r.status === "errors" ? `PDF built through ${d.errors.length} LaTeX error${d.errors.length === 1 ? "" : "s"}` : "could not be built";
   out.push(`${r.doc.root}: ${head}`);
   for (const e of d.errors.slice(0, 15)) {
     const where = e.file ? `${repoPath(r, e.file, prefix)}:${e.lines.join(",")}` : e.source ? `(${e.source})` : "";
@@ -139,6 +139,16 @@ function bibliographyTool(r: DocumentResult): string | null {
   return /^Running '(\S*bib\S*|biber)\b/m.exec(r.runOutput)?.[1] ?? r.doc.bibTool;
 }
 
+/** What to try when the runner could not download something. */
+export const NETWORK_HINT =
+  "The runner could not download what it needs. On a GitHub-hosted runner this is usually temporary: re-run the job. " +
+  "On a self-hosted runner, check that a firewall lets it reach these addresses over HTTPS. Behind a proxy, set `HTTPS_PROXY` for the job.";
+
+/** The summary of a run that stopped before it had results to report. */
+export function fatalMarkdown(message: string, hint?: string): string {
+  return ["## ❌ The build stopped", "", `**${esc(message)}**`, "", ...(hint ? [hint, ""] : []), "The log of this step shows what happened before this."].join("\n");
+}
+
 export function summaryMarkdown(f: RunFacts): string {
   // The headline is about the main documents; the others are listed below it.
   const mains = f.results.filter((r) => r.doc.main);
@@ -156,10 +166,11 @@ export function summaryMarkdown(f: RunFacts): string {
     lines.push("The step is marked as failed so that the errors get noticed. To let it pass while they remain, add `on_error: warn` to the workflow.", "");
   }
   const othersFailed = f.results.filter((r) => !r.doc.main && r.status !== "ok");
-  if (othersFailed.length) {
-    lines.push(`The main document${mains.length > 1 ? "s were" : " was"} chosen because ${f.mainReason ?? "it is marked"}. ${othersFailed.length} other document${othersFailed.length > 1 ? "s have" : " has"} problems, listed below; they do not fail the build.`, "");
-  } else if (f.mainReason === "no main document is marked, so all count") {
-    lines.push(`Several documents were found and none is marked as the main one, so each must build. To build only one, set \`root_file\`, or start the files it includes with \`% !TeX root = main.tex\`.`, "");
+  const others = `${othersFailed.length} other document${othersFailed.length > 1 ? "s have" : " has"} problems, listed below; they do not fail the build.`;
+  if (f.mainReason === "no main document is marked, so all count") {
+    lines.push(`Several documents were found and none is marked as the main one, so each must build, standalone figures aside. To build only one, set \`root_file\`, or start the files it includes with \`% !TeX root = main.tex\`.${othersFailed.length ? ` ${others}` : ""}`, "");
+  } else if (othersFailed.length) {
+    lines.push(`The main document${mains.length > 1 ? "s were" : " was"} chosen because ${f.mainReason ?? "it is marked"}. ${others}`, "");
   }
   lines.push(`${failed.length === mains.length ? "Stopped after" : "Built in"} ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
     (f.artifactUrl ? ` [Download the PDF${f.results.length > 1 ? "s" : ""}](${f.artifactUrl})` : ""));

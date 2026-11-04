@@ -47,6 +47,20 @@ describe("chooseMain", () => {
   });
 });
 
+describe("chooseMain, with nothing marked", () => {
+  it("does not let a standalone figure fail the build", () => {
+    const ws = fx("roots-ambiguous-figure");
+    const files = listTexFiles(ws);
+    expect(chooseMain(ws, files, findRoots(ws, files))).toEqual({ main: ["a.tex", "b.tex"], others: ["fig.tex"], reason: "no main document is marked, so all count" });
+  });
+
+  it("counts every figure when there are only figures", () => {
+    const ws = fx("roots-only-figures");
+    const files = listTexFiles(ws);
+    expect(chooseMain(ws, files, findRoots(ws, files))).toEqual({ main: ["one.tex", "two.tex"], others: [], reason: "no main document is marked, so all count" });
+  });
+});
+
 describe("planDocument", () => {
   it("collects packages, libraries, languages and bibliography from a multi-file thesis", () => {
     const d = planDocument(fx("thesis"), "main.tex");

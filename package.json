@@ -16,7 +16,8 @@
   "dependencies": {
     "@actions/artifact": "^2.3.2",
     "@actions/cache": "^4.0.3",
-    "@actions/core": "^1.11.1"
+    "@actions/core": "^1.11.1",
+    "undici": "^7"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

@@ -30,20 +30,33 @@ export function tlnetCandidates(year?: number): string[] {
   return year ? HISTORIC.map((h) => `${h}/${year}/tlnet-final`) : MIRRORS.map((m) => `${m}/systems/texlive/tlnet`);
 }
 
-/** Repositories in the order they answered, at most `max` of them. */
-export function rankMirrors(tlnets: string[], max = 3): Promise<string[]> {
+/** The runner could not reach or read what it had to download. */
+export class NetworkError extends Error {}
+
+/** Why a request failed, in a few words: the system's error code rather than "fetch failed". */
+export function failureReason(err: unknown): string {
+  const e = err as { name?: string; message?: string; cause?: { code?: string; message?: string } };
+  if (e?.name === "TimeoutError") return "no answer in time";
+  return e?.cause?.code ?? e?.cause?.message ?? e?.message ?? String(err);
+}
+
+/**
+ * Repositories in the order they answered, at most `max` of them. Those that
+ * did not answer are added to `failures`, by URL, with the reason.
+ */
+export function rankMirrors(tlnets: string[], max = 3, failures?: Map<string, string>): Promise<string[]> {
   return new Promise((resolve) => {
     const answered: string[] = [];
     let pending = tlnets.length;
     for (const tlnet of tlnets) {
       fetch(`${tlnet}/tlpkg/texlive.tlpdb.sha512`, { signal: AbortSignal.timeout(6000) })
         .then(async (res) => {
-          if (!res.ok) return;
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           await res.arrayBuffer();
           answered.push(tlnet);
           if (answered.length === max) resolve(answered.slice());
         })
-        .catch(() => undefined)
+        .catch((err) => void failures?.set(tlnet, failureReason(err)))
         .finally(() => {
           if (--pending === 0) resolve(answered.slice(0, max));
         });
@@ -61,14 +74,14 @@ export async function fetchBytes(url: string, retries = 3): Promise<Buffer> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(120_000) });
-      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return Buffer.from(await res.arrayBuffer());
     } catch (err) {
       lastError = err;
       await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
     }
   }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  throw new NetworkError(`Could not download ${url}: ${failureReason(lastError)}`);
 }
 
 export function sha512(data: Buffer): string {

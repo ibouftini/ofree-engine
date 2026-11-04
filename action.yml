@@ -17,7 +17,7 @@ inputs:
     description: Build program. latexmk is the only one with automatic recovery.
     default: latexmk
   args:
-    description: Arguments for the build program. Default - -interaction=nonstopmode -file-line-error -halt-on-error, with which a document with errors is built again through them. Setting -halt-on-error yourself stops at the first error.
+    description: Arguments for the build program, replacing the defaults. LaTeX errors do not stop the build, unless these arguments include -halt-on-error.
   latexmk_use_xelatex:
     description: Force XeLaTeX for every document.
     default: "false"
@@ -50,7 +50,7 @@ inputs:
     description: Accepted for compatibility. Every document is always built; on_error and the main document decide whether the step fails.
     default: "false"
   texlive_version:
-    description: Accepted for compatibility; the current TeX Live is used.
+    description: A TeX Live year to use (2023, for example), from TeX Live's archive of past releases. Default - the current one.
   os:
     description: Ignored (no Docker image is used).
   docker_image:

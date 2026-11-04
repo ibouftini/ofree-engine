@@ -2,6 +2,8 @@
 
 Fast, zero-configuration LaTeX builds on GitHub Actions.
 
+The GitHub Marketplace lists this action as **ofree LaTeX**. In a workflow, its name is `ibouftini/ofree-engine@v1`, as below.
+
 ## Use
 
 Save this as `.github/workflows/latex.yml` in your repository and push it:
@@ -34,7 +36,7 @@ The action:
 
 Without `root_file`, one document decides whether the build passes, so an old draft cannot fail it. Files that are parts of a document are left out: those whose `% !TeX root` names another file, and `subfiles` parts. The main document is the file those comments name, else what `.latexmkrc` lists in `@default_files`, else `main.tex`, else the only document besides standalone figures. The others are built too and their PDFs uploaded, but their errors are only warnings.
 
-If nothing marks a main document, every document must build. The summary then says how to mark one.
+If nothing marks a main document, every document must build, except standalone figures, whose errors are only warnings. The summary then says how to mark one.
 
 ### Keeping the cache warm
 
@@ -58,7 +60,7 @@ It takes a few seconds (one billed minute a week on a private repository). Each 
 
 ### Runners
 
-Tested on `ubuntu-24.04`, `ubuntu-26.04`, `ubuntu-24.04-arm`, `macos-latest`, and in a container job running as root. A job that is neither root nor allowed `sudo` must install programs in an earlier step. On macOS, Homebrew makes the first run with programs slow (about 3 minutes with Inkscape); later runs restore them in 10–20 s.
+Tested on `ubuntu-24.04`, `ubuntu-26.04`, `ubuntu-24.04-arm`, `macos-latest`, and in a container job running as root. A job that is neither root nor allowed `sudo` must install programs in an earlier step. Behind a proxy, downloads follow `HTTPS_PROXY` and `NO_PROXY`. On macOS, Homebrew makes the first run with programs slow (about 3 minutes with Inkscape); later runs restore them in 10–20 s.
 
 ### Coming from `xu-cheng/latex-action`
 
@@ -70,7 +72,7 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 |---|---|---|
 | `root_file` | found automatically | The documents to build, one per line; globs work |
 | `working_directory` | repository root | Where to look for documents |
-| `args` | | Arguments for latexmk, replacing the defaults |
+| `args` | | Arguments for latexmk, replacing the defaults. LaTeX errors do not stop the build, unless these include `-halt-on-error` (the behaviour of `xu-cheng/latex-action`) |
 | `on_error` | `fail` | With `fail`, LaTeX errors fail the step (the PDF is still uploaded); with `warn`, the step passes when a PDF was built |
 | `microsoft_fonts` | `true` | Download Microsoft's core fonts when a document uses one; `false` uses metric-compatible free fonts (Tinos for Times New Roman, Arimo for Arial, …) |
 | `shell_escape` | `auto` | `auto` enables it only for documents that need it (minted, svg, …); `always`; `never` |
@@ -80,10 +82,18 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 | `keep_warm` | `false` | Only keep the cached TeX Live alive, without compiling (see [Keeping the cache warm](#keeping-the-cache-warm)) |
 | `upload` | `true` | Upload the PDFs as a workflow artifact |
 | `artifact_name` | `pdf` | Name of that artifact |
+| `extra_system_packages` | | System packages to install with `apt` or Homebrew, separated by spaces |
+| `pre_compile` | | Bash commands to run before compiling |
+| `post_compile` | | Bash commands to run after compiling |
+| `compiler` | `latexmk` | Build program; only latexmk has automatic recovery |
+| `latexmk_use_xelatex` | `false` | Force XeLaTeX for every document |
+| `latexmk_use_lualatex` | `false` | Force LuaLaTeX for every document |
+| `latexmk_shell_escape` | `false` | The same as `shell_escape: always` |
+| `work_in_root_file_dir` | `false` | With `root_file`, compile each document from its own directory |
+| `texlive_version` | the current one | A TeX Live year to use, such as `2023` |
+| `continue_on_error` | `false` | Accepted for compatibility; has no effect, as every document is always built |
 
 Outputs: `pdf` (paths of the PDFs, one per line) and `status`: `success`, `errors` (PDFs built through LaTeX errors) or `failure` (a document has no PDF).
-
-If the workflow's `args` include `-halt-on-error`, the build stops at the first error instead, as it did with `xu-cheng/latex-action`.
 
 ## How it compares
 
