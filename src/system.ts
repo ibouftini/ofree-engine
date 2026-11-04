@@ -4,11 +4,12 @@
 // only unpack the snapshot: 0.1 to 2 s, instead of 7 to 40 s with apt, whose
 // time goes to dpkg and package scripts rather than to the files themselves.
 //
-// A snapshot is restored only on the OS it was made on, never overwrites a
+// Each OS has its own folder of snapshots, as they hold programs linked for it,
+// so a project built on several keeps them all. Restoring never overwrites a
 // file (a newer library in the runner image stays), and the programs are
 // checked afterwards: if one does not run, the package manager is used.
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { run } from "./util/exec.js";
 
@@ -27,9 +28,7 @@ const PACKAGES: Record<string, { apt?: string[]; brew?: string }> = {
 export const knownProgram = (name: string) => name in PACKAGES;
 
 interface Manifest {
-  /** OS the snapshots were made on. */
-  os: string;
-  /** Packages they hold. */
+  /** Packages the snapshots of this OS hold. */
   packages: string[];
 }
 
@@ -55,12 +54,13 @@ export class SystemPrograms {
   changed = false;
   private readonly manager: Manager;
   private readonly os: string;
+  private readonly dir: string;
   private snapshots = 0;
   private osDarwin = process.platform === "darwin";
 
   constructor(
     /** The folder of snapshots, inside the cached TeX Live. */
-    private readonly dir: string,
+    root: string,
     /** A folder outside it, for snapshots made while TeX Live is still being installed. */
     private readonly pending: string,
     private readonly log: (message: string) => void,
@@ -69,6 +69,7 @@ export class SystemPrograms {
     this.manager = this.osDarwin ? "brew" : process.platform === "linux" ? "apt" : null;
     const release = existsSync("/etc/os-release") ? readFileSync("/etc/os-release", "utf8") : null;
     this.os = osIdentity(release, this.osDarwin ? process.env.ImageOS?.replace(/^\D+/, "") || "any" : undefined);
+    this.dir = join(root, this.os);
     mkdirSync(pending, { recursive: true });
   }
 
@@ -83,11 +84,7 @@ export class SystemPrograms {
   }
 
   private manifest(dir = this.dir): Manifest {
-    if (existsSync(this.manifestPath(dir))) {
-      const m = JSON.parse(readFileSync(this.manifestPath(dir), "utf8")) as Manifest;
-      if (m.os === this.os) return m;
-    }
-    return { os: this.os, packages: [] };
+    return existsSync(this.manifestPath(dir)) ? (JSON.parse(readFileSync(this.manifestPath(dir), "utf8")) as Manifest) : { packages: [] };
   }
 
   /** Runs a command as root (container jobs often are root, without sudo). */
@@ -236,11 +233,9 @@ export class SystemPrograms {
     if (this.snapshots === 0) return;
     mkdirSync(this.dir, { recursive: true });
     const kept = this.manifest();
-    // Snapshots of another OS are of no more use, and must not be unpacked with these.
-    if (kept.packages.length === 0) for (const f of readdirSync(this.dir).filter((x) => x.endsWith(".tar"))) rmSync(join(this.dir, f));
     const made = this.manifest(this.pending);
     for (const f of readdirSync(this.pending).filter((x) => x.endsWith(".tar"))) copyFileSync(join(this.pending, f), join(this.dir, f));
-    writeFileSync(this.manifestPath(), JSON.stringify({ os: this.os, packages: [...new Set([...kept.packages, ...made.packages])] }));
+    writeFileSync(this.manifestPath(), JSON.stringify({ packages: [...new Set([...kept.packages, ...made.packages])] }));
     this.snapshots = 0;
     this.changed = true;
   }
