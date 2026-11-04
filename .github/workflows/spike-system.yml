@@ -1,0 +1,98 @@
+name: Spike · system programs without apt
+
+# Can programs from apt be restored from a snapshot of the files they added?
+# One job installs with apt, measures it and saves the snapshot; another, on a
+# clean runner, restores the snapshot and uses the programs for real.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [edge-cases]
+    paths: [".github/workflows/spike-system.yml"]
+
+jobs:
+  snapshot:
+    name: snapshot · ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: gs, pkgs: "ghostscript" }
+          - { name: gnuplot, pkgs: "gnuplot-nox" }
+          - { name: glut, pkgs: "libglut3.12" }
+          - { name: inkscape, pkgs: "inkscape" }
+    steps:
+      - name: Install and snapshot
+        run: |
+          set +e
+          dpkg-query -W -f='${Package}\n' | sort > before.txt
+          touch marker; sleep 1
+          t0=$(date +%s.%N)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ${{ matrix.pkgs }} >/dev/null 2>&1
+          echo "apt exit $?"
+          t1=$(date +%s.%N)
+          dpkg-query -W -f='${Package}\n' | sort > after.txt
+          comm -13 before.txt after.txt > new.txt
+          echo "new packages: $(wc -l < new.txt)"
+          t2=$(date +%s.%N)
+          # Files the packages list, without what programs do not read.
+          xargs -a new.txt dpkg -L 2>/dev/null | sort -u | grep -vE '^/usr/share/(doc|man|locale|lintian|info)/' > listed.txt
+          t3=$(date +%s.%N)
+          # What their install scripts generated (alternatives, caches), in the places they write to.
+          sudo find /etc /var/lib/ghostscript /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0 /usr/share/glib-2.0/schemas /usr/share/mime /usr/share/icons /usr/bin /usr/local/bin -xdev -cnewer marker \( -type f -o -type l \) 2>/dev/null | grep -vE '^/etc/(ld.so.cache|machine-id)' > generated.txt
+          t4=$(date +%s.%N)
+          cat listed.txt generated.txt | sort -u > all.txt
+          sudo tar -cf snap.tar --no-recursion -T all.txt 2>/dev/null
+          t5=$(date +%s.%N)
+          zstd -q -T0 -3 snap.tar -o snap.tar.zst
+          t6=$(date +%s.%N)
+          sudo chmod a+r snap.tar snap.tar.zst
+          echo "apt install:      $(python3 -c "print(round($t1-$t0,1))") s"
+          echo "dpkg -L:          $(python3 -c "print(round($t3-$t2,1))") s"
+          echo "find generated:   $(python3 -c "print(round($t4-$t3,1))") s ($(wc -l < generated.txt) files)"
+          echo "tar:              $(python3 -c "print(round($t5-$t4,1))") s"
+          echo "zstd:             $(python3 -c "print(round($t6-$t5,1))") s"
+          echo "files: $(wc -l < all.txt); tar $(du -h snap.tar | cut -f1); zstd $(du -h snap.tar.zst | cut -f1)"
+          echo "--- generated"; head -30 generated.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snap-${{ matrix.name }}
+          path: snap.tar.zst
+          compression-level: 0
+
+  restore:
+    name: restore · ${{ matrix.name }}
+    needs: snapshot
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [gs, gnuplot, glut, inkscape]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: snap-${{ matrix.name }}
+      - name: Restore and use
+        run: |
+          set +e
+          t0=$(date +%s.%N)
+          zstd -dc -T0 snap.tar.zst | sudo tar -xf - -C /
+          sudo ldconfig
+          t1=$(date +%s.%N)
+          echo "restore: $(python3 -c "print(round($t1-$t0,1))") s"
+          case "${{ matrix.name }}" in
+            gs)
+              printf '%%!PS-Adobe-3.0 EPSF-3.0\n%%%%BoundingBox: 0 0 100 100\n/Times-Roman findfont 20 scalefont setfont 10 40 moveto (Hello) show\nnewpath 10 10 moveto 90 90 lineto stroke showpage\n' > t.eps
+              gs --version; gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -sOutputFile=t.pdf t.eps; echo "gs exit $?"; ls -la t.pdf; pdffonts t.pdf 2>/dev/null | tail -2 ;;
+            gnuplot)
+              which gnuplot; gnuplot --version; printf 'set table "t.table"\nsplot exp(-x*x-y*y)\n' > t.gp; gnuplot t.gp; echo "gnuplot exit $?"; wc -l t.table ;;
+            glut)
+              ldconfig -p | grep -E 'libglut.so.3|libGL.so.1' ;;
+            inkscape)
+              which inkscape; inkscape --version
+              printf '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="#2b6cb0"/><text x="10" y="38" font-family="sans-serif" font-size="20" fill="white">SVG</text></svg>' > t.svg
+              t2=$(date +%s.%N); inkscape --export-filename=t.pdf --export-area-drawing --export-latex t.svg; echo "inkscape exit $?"; t3=$(date +%s.%N); echo "convert: $(python3 -c "print(round($t3-$t2,1))") s"; ls -la t.pdf t.pdf_tex ;;
+          esac
+          exit 0
