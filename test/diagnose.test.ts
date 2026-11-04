@@ -90,4 +90,8 @@ describe("diagnose", () => {
     expect(e).toMatchObject({ source: "latexmk", message: 'syntax error at (eval 9) line 29, near ""asy -o "$_"' });
     expect(e.hint).toContain(".latexmkrc has a Perl error");
   });
+
+  it("names a failed conversion by its files", () => {
+    expect(toolErrors("  cusdep asy pdf main-1: Command for 'cusdep asy pdf main-1' gave return code 32512", 0)[0]).toMatchObject({ source: "asy", message: "Converting main-1.asy to main-1.pdf failed" });
+  });
 });

@@ -121,6 +121,11 @@ describe("parseLog", () => {
     expect(parseLog("! Undefined control sequence.").needsUpdate).toBe(false);
   });
 
+  it("reports a shared library a program needs", () => {
+    const f = parseLog("asy: error while loading shared libraries: libglut.so.3: cannot open shared object file: No such file or directory");
+    expect(f.missing).toContainEqual({ kind: "program", name: "libglut.so.3" });
+  });
+
   it("asks for shell escape when minted says so", () => {
     expect(parseLog("Package minted Error: You must invoke LaTeX with the -shell-escape flag.").needsShellEscape).toBe(true);
   });

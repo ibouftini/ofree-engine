@@ -313,11 +313,12 @@ function addOnce(map: Map<string, Ref>, key: string, ref: Ref) {
 }
 
 /** Packages that run a program TeX Live does not ship (installed from the system's packages). */
-const SYSTEM_PROGRAM_PACKAGES: Record<string, [string, string]> = {
-  svg: ["inkscape", "the svg package converts SVG files with Inkscape"],
-  gnuplottex: ["gnuplot", "gnuplottex runs gnuplot"],
-  asymptote: ["gs", "Asymptote converts its figures with Ghostscript"],
-  "auto-pst-pdf": ["gs", "auto-pst-pdf converts PostScript with Ghostscript"],
+const SYSTEM_PROGRAM_PACKAGES: Record<string, [string, string][]> = {
+  svg: [["inkscape", "the svg package converts SVG files with Inkscape"]],
+  gnuplottex: [["gnuplot", "gnuplottex runs gnuplot"]],
+  // TeX Live's asy needs libglut (which brings libGL) even without a window.
+  asymptote: [["gs", "Asymptote converts its figures with Ghostscript"], ["libglut.so.3", "TeX Live's asy needs this library"]],
+  "auto-pst-pdf": [["gs", "auto-pst-pdf converts PostScript with Ghostscript"]],
 };
 
 const SHELL_ESCAPE_PACKAGES: Record<string, string> = {
@@ -394,8 +395,7 @@ function scanText(
         }
       }
       if (name in SYSTEM_PROGRAM_PACKAGES) {
-        const [program, reason] = SYSTEM_PROGRAM_PACKAGES[name];
-        if (!acc.systemPrograms.has(program)) acc.systemPrograms.set(program, { ...r, reason });
+        for (const [program, reason] of SYSTEM_PROGRAM_PACKAGES[name]) if (!acc.systemPrograms.has(program)) acc.systemPrograms.set(program, { ...r, reason });
       }
       if (name in SHELL_ESCAPE_PACKAGES && SHELL_ESCAPE_PACKAGES[name] && !acc.shellEscape) {
         acc.shellEscape = { ...r, reason: SHELL_ESCAPE_PACKAGES[name] };

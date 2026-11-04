@@ -75,6 +75,8 @@ export function parseLog(raw: string): LogFindings {
   // EPS images are converted by Ghostscript (dvipdfmx through rungs, pdfLaTeX through epstopdf).
   if (/Image inclusion failed for "[^"]+\.e?ps"|Could not open conversion result .* for image "[^"]+\.e?ps"|epstopdf.*(?:GPL Ghostscript|\bgs\b).*(?:not found|failed)/i.test(output))
     missing.push({ kind: "program", name: "gs" });
+  // A program that starts without a system library it needs.
+  for (const m of output.matchAll(/error while loading shared libraries: (\S+?):/g)) missing.push({ kind: "program", name: m[1] });
   // "kpathsea: Running mktextfm X" means TeX is generating a font, not that it is missing.
   const generatedFonts = [...output.matchAll(/mktex(?:tfm|pk|mf): \S+: successfully generated/g)].length;
   for (const m of output.matchAll(/(?:sh: \d+: |\/bin\/sh: )?(\S+): (?:command )?not found/g)) {

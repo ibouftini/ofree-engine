@@ -146,7 +146,7 @@ describe("planDocument", () => {
 
   it("knows the programs outside TeX Live a document runs, and turns on shell escape", () => {
     const d = planDocument(fx("programs"), "main.tex");
-    expect([...d.systemPrograms.keys()].sort()).toEqual(["gnuplot", "gs", "inkscape"]);
+    expect([...d.systemPrograms.keys()].sort()).toEqual(["gnuplot", "gs", "inkscape", "libglut.so.3"]);
     expect(d.systemPrograms.get("gnuplot")?.reason).toBe("pgfplots computes this plot with gnuplot");
     expect(d.shellEscape).not.toBeNull();
     expect(planDocument(fx("eps"), "main.tex").systemPrograms.get("gs")?.reason).toBe("EPS images are converted with Ghostscript");

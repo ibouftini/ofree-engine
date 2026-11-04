@@ -212,7 +212,10 @@ export function toolErrors(output: string, texErrors: number): Issue[] {
   if (out.length === 0 && texErrors === 0) {
     for (const m of output.matchAll(/^\s*(\w+)(?: [^:\n]*)?: Command for '([^']+)' gave return code (\d+)/gm)) {
       if (TEX_RULES.test(m[1])) continue;
-      if (!out.some((o) => o.source === m[1])) out.push({ message: `${m[2]} failed (exit code ${m[3]})`, source: m[1], lines: [], hint: "See this program's messages in the log of this step." });
+      // A custom rule is named "cusdep asy pdf main-1": main-1.asy to main-1.pdf.
+      const conv = /^cusdep (\S+) (\S+) (.+)$/.exec(m[2]);
+      const message = conv ? `Converting ${conv[3]}.${conv[1]} to ${conv[3]}.${conv[2]} failed` : `${m[2]} failed (exit code ${m[3]})`;
+      if (!out.some((o) => o.source === m[1] && o.message === message)) out.push({ message, source: conv ? conv[1] : m[1], lines: [], hint: "See this program's messages in the log of this step." });
     }
   }
   return out;

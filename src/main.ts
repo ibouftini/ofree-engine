@@ -91,7 +91,13 @@ function debianName(pkg: string): string {
 }
 
 /** Programs documents run that TeX Live does not ship, and the Ubuntu package that has them. */
-const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript", inkscape: "inkscape", gnuplot: "gnuplot-nox" };
+const SYSTEM_PROGRAMS: Record<string, string> = { gs: "ghostscript", inkscape: "inkscape", gnuplot: "gnuplot-nox", "libglut.so.3": "libglut3.12" };
+
+/** Whether a program or shared library (libglut.so.3) is on this machine. */
+async function systemHas(name: string): Promise<boolean> {
+  if (/\.so(\.\d+)*$/.test(name)) return (await run("ldconfig", ["-p"])).output.includes(name);
+  return (await run(name, ["--version"])).code === 0;
+}
 
 async function installSystemPackages(pkgs: string[]) {
   core.info(`Installing system packages: ${pkgs.join(" ")}`);
@@ -202,7 +208,7 @@ async function main() {
   for (const d of docs) for (const [program, why] of d.systemPrograms) if (!needed.has(program)) needed.set(program, `${why.reason} (${why.file}:${why.line})`);
   const absent = [];
   for (const [program, why] of needed) {
-    if (!SYSTEM_PROGRAMS[program] || (await run(program, ["--version"])).code === 0) continue;
+    if (!SYSTEM_PROGRAMS[program] || (await systemHas(program))) continue;
     core.info(`Installing ${SYSTEM_PROGRAMS[program]} alongside TeX Live: ${why}`);
     absent.push(SYSTEM_PROGRAMS[program]);
   }
@@ -294,9 +300,9 @@ async function main() {
       const roots = new Set<string>();
       const provided: string[] = [];
       for (const m of missing) {
-        if (m.kind === "program" && SYSTEM_PROGRAMS[m.name] && (await run(m.name, ["--version"])).code !== 0) {
+        if (m.kind === "program" && SYSTEM_PROGRAMS[m.name] && !(await systemHas(m.name))) {
           await installSystemPackages([SYSTEM_PROGRAMS[m.name]]);
-          if ((await run(m.name, ["--version"])).code === 0) provided.push(`${SYSTEM_PROGRAMS[m.name]} (system)`);
+          if (await systemHas(m.name)) provided.push(`${SYSTEM_PROGRAMS[m.name]} (system)`);
           continue;
         }
         if (m.kind === "language") {
