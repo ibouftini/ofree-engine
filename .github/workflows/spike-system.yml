@@ -3,6 +3,7 @@ name: Spike · system programs without apt
 # Can programs from apt be restored from a snapshot of the files they added?
 # One job installs with apt, measures it and saves the snapshot; another, on a
 # clean runner, restores the snapshot and uses the programs for real.
+# Rerun: libglut on Ubuntu 24.04.
 
 on:
   workflow_dispatch:
@@ -20,6 +21,7 @@ jobs:
       matrix:
         include:
           - { where: ubuntu, os: ubuntu-latest, container: "" }
+          - { where: ubuntu-24, os: ubuntu-24.04, container: "" }
           - { where: macos, os: macos-latest, container: "" }
           - { where: root-container, os: ubuntu-latest, container: "ubuntu:24.04" }
     steps:
@@ -42,6 +44,7 @@ jobs:
       matrix:
         include:
           - { where: ubuntu, os: ubuntu-latest, container: "" }
+          - { where: ubuntu-24, os: ubuntu-24.04, container: "" }
           - { where: macos, os: macos-latest, container: "" }
           - { where: root-container, os: ubuntu-latest, container: "ubuntu:24.04" }
     steps:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keepInSnapshot, knownProgram, osIdentity } from "../src/system.js";
+import { keepInSnapshot, knownProgram, libraryListed, osIdentity } from "../src/system.js";
 
 describe("snapshots of system programs", () => {
   it("belong to one OS", () => {
@@ -12,6 +12,13 @@ describe("snapshots of system programs", () => {
   it("leave out documentation and packaging state", () => {
     for (const p of ["/usr/bin/gs", "/usr/lib/x86_64-linux-gnu/libgs.so.10", "/etc/alternatives/gnuplot", "/usr/share/ghostscript/10.06.0/lib/gs_init.ps"]) expect(keepInSnapshot(p), p).toBe(true);
     for (const p of ["/.", "/usr/share/doc/gnuplot/README", "/usr/share/man/man1/gs.1.gz", "/usr/share/locale/fr/LC_MESSAGES/inkscape.mo", "/etc/ld.so.cache", "/var/lib/dpkg/status", "/var/cache/apt/pkgcache.bin"]) expect(keepInSnapshot(p), p).toBe(false);
+  });
+
+  it("do not mistake a library for one with a longer version", () => {
+    const ldconfig = "42 libs found in cache\n\tlibglut.so.3.12 (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/libglut.so.3.12\n\tlibGL.so.1 (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/libGL.so.1";
+    expect(libraryListed(ldconfig, "libglut.so.3")).toBe(false);
+    expect(libraryListed(ldconfig, "libglut.so.3.12")).toBe(true);
+    expect(libraryListed(ldconfig, "libGL.so.1")).toBe(true);
   });
 
   it("are only for programs it knows", () => {

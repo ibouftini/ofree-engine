@@ -9,7 +9,7 @@
 // checked afterwards: if one does not run, the package manager is used.
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { run } from "./util/exec.js";
 
 type Manager = "apt" | "brew" | null;
@@ -38,6 +38,11 @@ export function osIdentity(osRelease: string | null, darwinMajor?: string): stri
   if (darwinMajor) return `macos-${darwinMajor}`;
   const field = (k: string) => new RegExp(`^${k}="?([^"\\n]*)"?$`, "m").exec(osRelease ?? "")?.[1] ?? "";
   return `${field("ID") || "linux"}-${field("VERSION_ID") || "unknown"}`;
+}
+
+/** Whether `ldconfig -p` lists exactly this library, not one with a longer version ("libglut.so.3.12"). */
+export function libraryListed(ldconfig: string, name: string): boolean {
+  return ldconfig.split("\n").some((line) => line.trim().split(/\s+/)[0] === name);
 }
 
 /** Whether a snapshot file list entry is worth keeping: documentation and packaging state are not. */
@@ -69,7 +74,7 @@ export class SystemPrograms {
 
   /** Whether a program or shared library (libglut.so.3) is on this machine. */
   async has(name: string): Promise<boolean> {
-    if (/\.so(\.\d+)*$/.test(name)) return (await run("ldconfig", ["-p"])).output.includes(name);
+    if (/\.so(\.\d+)*$/.test(name)) return libraryListed((await run("ldconfig", ["-p"])).output, name);
     return (await run(name, ["--version"])).code === 0;
   }
 
@@ -125,6 +130,16 @@ export class SystemPrograms {
       await this.aptInstall(pkgs);
       const added = (await list()).filter((p) => !before.has(p));
       if (added.length) add((await run("dpkg", ["-L", ...added])).output);
+      // Ubuntu 24.04's libglut3.12 has only libglut.so.3.12, under a name TeX Live's asy does not ask for.
+      if (pkgs.includes("libglut3.12") && !(await this.has("libglut.so.3"))) {
+        const glut = /\s=>\s(\S+libglut\.so\.3\.\d+)/.exec((await run("ldconfig", ["-p"])).output)?.[1];
+        if (glut) {
+          const link = join(dirname(glut), "libglut.so.3");
+          await this.root("ln", ["-sf", basename(glut), link]);
+          await this.root("ldconfig", []);
+          add(link);
+        }
+      }
       // What package scripts generated: alternatives, font and icon caches, ...
       const places = ["/etc", "/var/lib/ghostscript", "/usr/bin", "/usr/local/bin", "/usr/share/glib-2.0/schemas", "/usr/share/mime", "/usr/share/icons", "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0", "/usr/lib/aarch64-linux-gnu/gdk-pixbuf-2.0"];
       add((await this.root("find", [...places.filter(existsSync), "-xdev", "-cnewer", marker, "(", "-type", "f", "-o", "-type", "l", ")"])).output);
