@@ -1,0 +1,17 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'main.blg'
+[52] biber:342> INFO - === Tue Nov  3, 2026, 21:50:57
+[65] Biber.pm:421> INFO - Reading 'main.bcf'
+[110] Biber.pm:1002> INFO - Found 2 citekeys in bib section 0
+[122] Biber.pm:4487> INFO - Processing section 0
+[129] Biber.pm:4678> INFO - Looking for bibtex file 'refs.bib' for section 0
+[129] bibtex.pm:1713> INFO - LaTeX decoding ...
+[130] bibtex.pm:1519> INFO - Found BibTeX data source 'refs.bib'
+[153] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[153] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[153] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[154] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[155] bbl.pm:676> INFO - Writing 'main.bbl' with encoding 'UTF-8'
+[155] bbl.pm:779> INFO - Output to main.bbl
+[156] Biber.pm:132> WARN - I didn't find a database entry for 'nobody99' (section 0)
+[156] Biber.pm:134> INFO - WARNINGS: 1

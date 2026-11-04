@@ -1,0 +1,55 @@
+This is BibTeX, Version 0.99d (TeX Live 2025/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: plainnat.bst
+Database file #1: refs.bib
+I was expecting a `,' or a `}'---line 2 of file refs.bib
+ : @article{broken, author={B. Author} 
+ :                                     title={Missing comma}, journal={J}, year={2021}}
+I'm skipping whatever remains of this entry
+Warning--empty title in broken
+Warning--empty journal in broken
+Warning--empty year in broken
+Warning--empty year in broken
+You've used 2 entries,
+            2773 wiz_defined-function locations,
+            599 strings with 4861 characters,
+and the built_in function-call counts, 622 in all, are:
+= -- 47
+> -- 20
+< -- 2
++ -- 8
+- -- 6
+* -- 39
+:= -- 103
+add.period$ -- 4
+call.type$ -- 2
+change.case$ -- 7
+chr.to.int$ -- 2
+cite$ -- 8
+duplicate$ -- 38
+empty$ -- 61
+format.name$ -- 8
+if$ -- 120
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 2
+newline$ -- 16
+num.names$ -- 8
+pop$ -- 25
+preamble$ -- 1
+purify$ -- 6
+quote$ -- 0
+skip$ -- 24
+stack$ -- 0
+substring$ -- 4
+swap$ -- 1
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 22
+warning$ -- 4
+while$ -- 6
+width$ -- 0
+write$ -- 26
+(There was 1 error message)
