@@ -70,7 +70,7 @@ const RULES: Rule[] = [
   [/File [`'‘]([^'’]+)['’] not found/, (m, _i, similar) => {
     const name = m[1];
     const alt = similar(name);
-    if (alt.length) return `There is no \`${name}\`, but there is \`${alt[0]}\`: check the folder and the extension.`;
+    if (alt.length) return `There is no \`${name}\`, but there is \`${alt[0]}\`: check the name, the folder and the extension.`;
     if (/\.(sty|cls)$/.test(name)) return `No TeX Live package provides \`${name}\`: check its name, or add the file to the repository.`;
     return `\`${name}\` is not in the repository at this path. Paths are relative to the main document or a \`\\graphicspath\` folder; check the name, and that the file is committed.`;
   }],

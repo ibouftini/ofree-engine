@@ -2,8 +2,6 @@
 
 Fast, zero-configuration LaTeX builds on GitHub Actions.
 
-**Status: early development.** It works on the bundled samples and is being benchmarked on real repositories. Expect changes.
-
 ## Use
 
 Save this as `.github/workflows/latex.yml` in your repository and push it:
@@ -15,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: ibouftini/ofree-engine@main
+      - uses: ibouftini/ofree-engine@v1
 ```
 
 Nothing else is needed. Your PDF is in the repository's **Actions** tab: open the run, then download the `pdf` artifact from its summary page. The same page explains any errors.
@@ -28,7 +26,7 @@ The action:
 - **Finds fonts that are not in TeX Live:** font files in the repository are used as they are, by name. Other fonts are downloaded from Google Fonts, and Microsoft's core fonts (Arial, Times New Roman, Courier New, Georgia, Verdana, …) from Microsoft, under Microsoft's licence for them. Calibri and Cambria cannot be downloaded: Carlito and Caladea, which have the same character widths (so the same line and page breaks), stand in for them, with a warning. So do Selawik for Segoe UI, TeX Gyre for Helvetica, Times, Palatino and others, Fandol for the Windows Chinese fonts (`ctex` with `fontset=windows`) and IPAex for the IPA fonts. Fonts with no such match get a font of similar style, such as Inconsolata for Consolas and Inter for Aptos, and the warning says lines may break differently. A font found nowhere gets Latin Modern, so the PDF keeps its text, and is reported as an error, as its name is probably wrong.
 - **Installs the programs documents run:** Ghostscript for EPS images, Inkscape for the `svg` package, gnuplot for `gnuplottex` and pgfplots, what Asymptote needs, only when a document uses them, with `apt` or Homebrew. That happens once: what they added is saved with the cached TeX Live and unpacked on later runs, in about 1 s instead of about 25 s. The same goes for `extra_system_packages`. Shell escape is turned on only for documents that need it.
 - **Keeps that TeX Live in the Actions cache,** so later runs start in seconds.
-- **Builds through LaTeX errors,** as Overleaf does: an undefined command or a missing figure still gives a PDF (with `??` where references are missing). The exception is a package or input file that does not exist, where TeX itself stops: there is no PDF until it is fixed, and the summary says that later errors may then appear.
+- **Builds through LaTeX errors,** as Overleaf does: an undefined command or a missing figure still gives a PDF (with `??` where references are missing). A package or input file that does not exist counts too: the PDF is built without it, and the summary lists it first. Only a missing document class stops the build, as there is nothing to build without it; the summary then says that later errors may appear.
 - **Explains what to fix:** the summary lists each real error once, at its file and line, with the command or text where TeX stopped and a plain-language hint. Errors that only follow from an earlier one are left out, and undefined references, citations and characters a font lacks are grouped, with where each reference and citation is used.
 - **Uploads the PDFs as an artifact,** also when they have errors.
 
@@ -51,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: ibouftini/ofree-engine@main
+      - uses: ibouftini/ofree-engine@v1
         with:
           keep_warm: true
 ```
@@ -149,3 +147,7 @@ pnpm install
 pnpm test        # set TLPDB=/path/to/texlive.tlpdb to include the real-database tests
 pnpm run build   # dist/ is committed; CI checks it is up to date
 ```
+
+## License
+
+[MIT](LICENSE).

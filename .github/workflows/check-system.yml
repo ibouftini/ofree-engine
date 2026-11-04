@@ -1,4 +1,4 @@
-name: Spike · system programs without apt
+name: Check · system programs without apt
 
 # Programs from the package manager, restored from the cached snapshot: the
 # programs sample built twice in a row, on each kind of runner.

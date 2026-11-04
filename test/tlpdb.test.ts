@@ -65,7 +65,8 @@ describe("parseTlpdb (inline sample)", () => {
 
 const real = process.env.TLPDB;
 describe.skipIf(!real || !existsSync(real))("real texlive.tlpdb", () => {
-  const db = parseTlpdb(readFileSync(real!, "utf8"));
+  // vitest runs this body even when it skips the tests.
+  const db = parseTlpdb(real && existsSync(real) ? readFileSync(real, "utf8") : "");
   const arch = "x86_64-linux";
   const index = buildFileIndex(db, arch);
 

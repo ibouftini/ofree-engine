@@ -42,6 +42,7 @@ jobs:
   incumbent:
     name: incumbent · ${{ matrix.doc }}
     runs-on: ubuntu-latest
+    continue-on-error: true # it fails on some samples by design; only this action's jobs decide the run
     strategy:
       fail-fast: false
       matrix:

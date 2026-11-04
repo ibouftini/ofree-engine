@@ -22,6 +22,8 @@ export interface RunFacts {
   artifactUrl?: string;
   /** How the main documents were chosen. */
   mainReason?: string;
+  /** Whether LaTeX errors fail the step. */
+  onError?: "fail" | "warn";
   /** Fonts that are not in TeX Live, and where they came from. */
   fonts?: FontOutcome[];
 }
@@ -68,7 +70,7 @@ export function annotate(results: DocumentResult[], onError: "fail" | "warn", pr
     for (const e of errors) {
       const text = describe(e) + (e.hint ? `\n${plain(e.hint)}` : "");
       const file = e.file ? repoPath(r, e.file, prefix) : posix.join(prefix || ".", r.doc.root);
-      report(text, { title: `LaTeX error in ${r.doc.root}${r.doc.main ? "" : " (not the main document)"}`, file, startLine: e.file ? e.lines[0] : undefined });
+      report(text, { title: r.doc.main ? "LaTeX error" : `LaTeX error in ${r.doc.root} (not the main document)`, file, startLine: e.file ? e.lines[0] : undefined });
     }
   }
 }
@@ -147,6 +149,9 @@ export function summaryMarkdown(f: RunFacts): string {
   else if (withErrors.length) lines.push(`## ⚠️ PDF${mains.length > 1 ? "s" : ""} built, with LaTeX errors to fix`);
   else lines.push(`## ✅ Your PDF${f.results.length > 1 ? "s are" : " is"} ready`);
   lines.push("");
+  if (withErrors.length && !failed.length && f.onError === "fail") {
+    lines.push("The step is marked as failed so that the errors get noticed. To let it pass while they remain, add `on_error: warn` to the workflow.", "");
+  }
   const othersFailed = f.results.filter((r) => !r.doc.main && r.status !== "ok");
   if (othersFailed.length) {
     lines.push(`The main document${mains.length > 1 ? "s were" : " was"} chosen because ${f.mainReason ?? "it is marked"}. ${othersFailed.length} other document${othersFailed.length > 1 ? "s have" : " has"} problems, listed below; they do not fail the build.`, "");

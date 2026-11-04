@@ -66,6 +66,13 @@ describe("summary", () => {
     expect(summaryMarkdown(facts(r))).toContain("`sec:x` at [`Ch/c.tex:49`](https://github.com/o/r/blob/abc/Ch/c.tex#L49)");
   });
 
+  it("explains the red mark on a build that gave a PDF, unless on_error lets it pass", () => {
+    const r = result("", null);
+    r.status = "errors";
+    expect(summaryMarkdown({ ...facts(r), onError: "fail" })).toContain("add `on_error: warn`");
+    expect(summaryMarkdown({ ...facts(r), onError: "warn" })).not.toContain("on_error");
+  });
+
   it("uses the singular for one PDF", () => {
     expect(summaryMarkdown(facts(result("", null)))).toContain("## ✅ Your PDF is ready");
   });

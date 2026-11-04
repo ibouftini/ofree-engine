@@ -1,4 +1,4 @@
-name: Spike · runners
+name: Check · runners
 
 # The action on runners other than x86 Ubuntu 24.04: ARM, macOS, the next
 # Ubuntu (ubuntu-latest moves to it), and a container job without sudo.

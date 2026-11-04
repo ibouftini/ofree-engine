@@ -17,6 +17,7 @@ jobs:
     name: incumbent · assumptionsofphysics-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',assumptionsofphysics-book,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -54,6 +55,7 @@ jobs:
     name: incumbent · blockstreamresearch-zk-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',blockstreamresearch-zk-book,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -91,6 +93,7 @@ jobs:
     name: incumbent · cvxgrp-cvxcla
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cvxgrp-cvxcla,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -128,6 +131,7 @@ jobs:
     name: incumbent · dcroote-stanford-thesis-example
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dcroote-stanford-thesis-example,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -161,6 +165,7 @@ jobs:
     name: incumbent · fhdwpb-latex-thesis-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fhdwpb-latex-thesis-template,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -194,6 +199,7 @@ jobs:
     name: incumbent · gboeing-cv
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',gboeing-cv,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -227,6 +233,7 @@ jobs:
     name: incumbent · harvard-edge-cs249r-book
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',harvard-edge-cs249r-book,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -262,6 +269,7 @@ jobs:
     name: incumbent · iydon-sustechthesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',iydon-sustechthesis,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -303,6 +311,7 @@ jobs:
     name: incumbent · nag-devops-speed-hpc
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',nag-devops-speed-hpc,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -350,6 +359,7 @@ jobs:
     name: incumbent · openhutb-neuro
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',openhutb-neuro,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -387,6 +397,7 @@ jobs:
     name: incumbent · ruiguoz-nwpu-beamer
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ruiguoz-nwpu-beamer,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -424,6 +435,7 @@ jobs:
     name: incumbent · spacelab-ufsc-obdh2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spacelab-ufsc-obdh2,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -459,6 +471,7 @@ jobs:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -496,6 +509,7 @@ jobs:
     name: incumbent · spamegg1-epp-discrete-math-5th-solutions-2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',spamegg1-epp-discrete-math-5th-solutions-2,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -533,6 +547,7 @@ jobs:
     name: incumbent · ucl-tdms
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ucl-tdms,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -568,6 +583,7 @@ jobs:
     name: incumbent · varaprasad6700-resume
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',varaprasad6700-resume,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -601,6 +617,7 @@ jobs:
     name: incumbent · ac-pate-latex-resume
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ac-pate-latex-resume,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -634,6 +651,7 @@ jobs:
     name: incumbent · adolbyb-icom-706-mkiig
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',adolbyb-icom-706-mkiig,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -669,6 +687,7 @@ jobs:
     name: incumbent · ahmed-alhindawi-latex-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ahmed-alhindawi-latex-template,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -704,6 +723,7 @@ jobs:
     name: incumbent · anastasia-labs-midgard
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',anastasia-labs-midgard,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -739,6 +759,7 @@ jobs:
     name: incumbent · andstor-tex-paper-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',andstor-tex-paper-template,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -776,6 +797,7 @@ jobs:
     name: incumbent · bagaswizard-buku-ta
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bagaswizard-buku-ta,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -809,6 +831,7 @@ jobs:
     name: incumbent · bipplane-resume-latex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bipplane-resume-latex,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -842,6 +865,7 @@ jobs:
     name: incumbent · cao-wuhui-szu-latex-master-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cao-wuhui-szu-latex-master-template,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -957,6 +981,7 @@ jobs:
     name: incumbent · capitan-parrot-salary-estimator
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',capitan-parrot-salary-estimator,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -994,6 +1019,7 @@ jobs:
     name: incumbent · cengkooo-proposal-imul-123140205
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cengkooo-proposal-imul-123140205,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1027,6 +1053,7 @@ jobs:
     name: incumbent · ctex-org-lshort-zh-cn
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ctex-org-lshort-zh-cn,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1064,6 +1091,7 @@ jobs:
     name: incumbent · david-alvarez-rosa-curriculum-vitae
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',david-alvarez-rosa-curriculum-vitae,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1099,6 +1127,7 @@ jobs:
     name: incumbent · diebrate-diebrate-github-io
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',diebrate-diebrate-github-io,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1136,6 +1165,7 @@ jobs:
     name: incumbent · digama0-conzf
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digama0-conzf,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1171,6 +1201,7 @@ jobs:
     name: incumbent · digo-certify-digo-certify-app
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',digo-certify-digo-certify-app,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1208,6 +1239,7 @@ jobs:
     name: incumbent · dknaack-master-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dknaack-master-thesis,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1251,6 +1283,7 @@ jobs:
     name: incumbent · dr-richard-barker-osdr-x-species-v2
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',dr-richard-barker-osdr-x-species-v2,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1288,6 +1321,7 @@ jobs:
     name: incumbent · eagleoutice-eagle-maps
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',eagleoutice-eagle-maps,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1321,6 +1355,7 @@ jobs:
     name: incumbent · erik-donath-mutau-rv32-soc
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',erik-donath-mutau-rv32-soc,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1356,6 +1391,7 @@ jobs:
     name: incumbent · fascetta-tool-lora-skill-ir
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fascetta-tool-lora-skill-ir,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1391,6 +1427,7 @@ jobs:
     name: incumbent · feathbow-tju-rl-template
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',feathbow-tju-rl-template,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1428,6 +1465,7 @@ jobs:
     name: incumbent · firefly-cpp-cover-letter-latex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',firefly-cpp-cover-letter-latex,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1461,6 +1499,7 @@ jobs:
     name: incumbent · fmuro-alg1
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',fmuro-alg1,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1494,6 +1533,7 @@ jobs:
     name: incumbent · franzmohr-fincommons
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',franzmohr-fincommons,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1531,6 +1571,7 @@ jobs:
     name: incumbent · garebear99-freeeq8
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',garebear99-freeeq8,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1566,6 +1607,7 @@ jobs:
     name: incumbent · ghdaru-tesedaru
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',ghdaru-tesedaru,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1603,6 +1645,7 @@ jobs:
     name: incumbent · kuisthesis-kyoto
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kuisthesis-kyoto,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1636,6 +1679,7 @@ jobs:
     name: incumbent · prg-thesis-titech
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',prg-thesis-titech,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1669,6 +1713,7 @@ jobs:
     name: incumbent · cpslab-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',cpslab-thesis,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1702,6 +1747,7 @@ jobs:
     name: incumbent · coins-article-tsukuba
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',coins-article-tsukuba,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1735,6 +1781,7 @@ jobs:
     name: incumbent · matsumoto-thesis
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',matsumoto-thesis,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1768,6 +1815,7 @@ jobs:
     name: incumbent · kut-platex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kut-platex,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1803,6 +1851,7 @@ jobs:
     name: incumbent · kut-lualatex
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',kut-lualatex,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1838,6 +1887,7 @@ jobs:
     name: incumbent · being24-template-ja
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',being24-template-ja,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1871,6 +1921,7 @@ jobs:
     name: incumbent · bando-weekly-report
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',bando-weekly-report,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -1906,6 +1957,7 @@ jobs:
     name: incumbent · rirekisho-lualatexja
     if: ${{ inputs.only == '' || contains(format(',{0},', inputs.only), ',rirekisho-lualatexja,') }}
     runs-on: ubuntu-latest
+    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5

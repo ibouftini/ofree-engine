@@ -201,10 +201,10 @@ async function main() {
     // Read the files of every package the documents use, not only new ones:
     // a restored installation may predate their dependencies.
     s = performance.now();
-    await completeDependencies(tl, arch, [...installed, ...resolution.reasons.keys()]);
+    const completed = await completeDependencies(tl, arch, [...installed, ...resolution.reasons.keys()]);
     core.info(`Dependency check done in ${seconds(s)} s`);
     provisionedFrom = restored.key
-      ? "restored from the cache, then completed"
+      ? installed.length + completed.length ? "restored from the cache, then completed" : "restored from the cache"
       : `installed now (${tl.stats.coldInstall ? "first run" : "partial"})`;
     // Save under this fingerprint even if nothing was added, so the next run is an exact match.
     if (restored.key) tl.changed = true;
@@ -339,6 +339,7 @@ async function main() {
     shellEscape: bool("latexmk_shell_escape") ? "always" : ((core.getInput("shell_escape") || "auto") as CompileOptions["shellEscape"]),
     // Build through errors unless the workflow's own args ask to stop at the first one.
     keepGoing: !userArgs.split(/\s+/).includes("-halt-on-error"),
+    stubDir: join(work, "stubs"),
     concurrency: Math.max(1, cpus().length),
     log: (m) => core.info(m),
   };
@@ -367,8 +368,8 @@ async function main() {
   for (const r of results) {
     core.info(digestText(r, prefix));
     core.startGroup(`${r.doc.root}: full log`);
-    core.info(`--- ${r.doc.root}: build program output (end) ---\n${r.runOutput.slice(-20_000)}`);
-    core.info(`--- ${r.doc.root}: engine log (end) ---\n${r.output.slice(r.runOutput.length).slice(-20_000)}`);
+    core.info(`--- ${r.doc.root}: build program output (end) ---\n${lastLines(r.runOutput)}`);
+    core.info(`--- ${r.doc.root}: engine log (end) ---\n${lastLines(r.output.slice(r.runOutput.length))}`);
     core.endGroup();
   }
   await shell(core.getInput("post_compile"), workspace, tl.env(), "post_compile");
@@ -412,6 +413,7 @@ async function main() {
           artifactUrl,
           fonts: fontOutcomes,
           mainReason,
+          onError,
         }),
       )
       .write();
@@ -424,14 +426,23 @@ async function main() {
 
   // Every document is always built; the step fails if one has no PDF, or has
   // LaTeX errors (its PDF is still uploaded) unless on_error is "warn".
+  // Not core.setFailed: GitHub would annotate ".github" with it, which is no
+  // place in the repository. annotate() has already marked the real places.
   if (failed.length > 0) {
-    core.setFailed(`${failed.length} of ${results.length} documents could not be built: ${failed.map((r) => r.doc.root).join(", ")}`);
+    core.info(`${failed.length} of ${results.length} documents could not be built: ${failed.map((r) => r.doc.root).join(", ")}`);
+    process.exitCode = 1;
   } else if (withErrors.length > 0 && onError === "fail") {
-    core.setFailed(
+    core.info(
       `LaTeX errors in ${withErrors.map((r) => `${r.doc.root} (${r.diagnosis.errors.length})`).join(", ")}. ` +
         `The PDF${withErrors.length > 1 ? "s were" : " was"} built and uploaded anyway; set on_error: warn to let the step pass.`,
     );
+    process.exitCode = 1;
   }
+}
+
+/** The end of a long log, from the start of a line. */
+function lastLines(text: string, size = 20_000): string {
+  return text.length <= size ? text : text.slice(text.indexOf("\n", text.length - size) + 1);
 }
 
 main().catch((err) => core.setFailed(err instanceof Error ? err.message : String(err)));

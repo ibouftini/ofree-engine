@@ -1,4 +1,4 @@
-name: Spike · cache contents
+name: Check · cache contents
 
 # What the cached TeX Live holds, and how big each part is once compressed
 # the way @actions/cache compresses it (tar + zstd).

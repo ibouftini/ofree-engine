@@ -187,7 +187,7 @@ function unclosedMath(file: string, line: number, ctx: SourceContext): { line: n
   for (let n = line; n >= 1 && line - n <= 8; n--) {
     const text = stripComments(lines[n - 1] ?? "");
     if (n < line && !text.trim()) return undefined;
-    if ((text.replace(/\\[\\$]/g, "").match(/\$/g) ?? []).length % 2 === 1) return { line: n, text: text.trim().slice(-50) };
+    if ((text.replace(/\\[\\$]/g, "").match(/\$/g) ?? []).length % 2 === 1) return { line: n, text: text.replace(/\s+/g, " ").trim().slice(-50) };
   }
   return undefined;
 }
@@ -212,6 +212,15 @@ function usedAt(key: string, lines: number[], ctx: SourceContext): Place[] | und
     if (at >= 0) return [{ file: s.file, line: at + 1 }];
   }
   return undefined;
+}
+
+/** A package or input file the document was built without, in place of the error TeX no longer reports. */
+export function missingFile(name: string, ctx: SourceContext): Issue {
+  const at = ctx.required?.(name);
+  const issue: Issue = { message: `File \`${name}' not found`, file: at?.file, lines: at ? [at.line] : [] };
+  const consequence = name.endsWith(".sty") ? "The PDF was built without it, so what it defines is listed as undefined." : "The PDF was built without this file.";
+  issue.hint = `${hintFor(issue, ctx.similarFiles)} ${consequence}`;
+  return issue;
 }
 
 function group<T extends { key: string; line?: number }>(items: T[]): Map<string, { first: T; lines: number[] }> {

@@ -119,6 +119,7 @@ def workflow(entries):
                 f"    name: {variant} · {e['id']}",
                 f"    if: ${{{{ inputs.only == '' || contains(format(',{{0}},', inputs.only), ',{e['id']},') }}}}",
                 "    runs-on: ubuntu-latest",
+                *(["    continue-on-error: true  # it fails on some entries by design; only this action's jobs decide the run"] if variant == "incumbent" else []),
                 "    timeout-minutes: 30",
                 "    steps:",
                 "      - uses: actions/checkout@v5",

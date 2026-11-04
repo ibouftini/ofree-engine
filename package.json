@@ -1,6 +1,6 @@
 {
   "name": "ofree-engine",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Fast, zero-configuration LaTeX builds on GitHub Actions",
   "license": "MIT",
@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --minify --outfile=dist/index.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --minify --outfile=dist/index.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url); process.noDeprecation = true;\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

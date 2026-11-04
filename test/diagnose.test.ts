@@ -38,7 +38,7 @@ describe("diagnose", () => {
   it("reports math left open once, on the line that opens it", () => {
     const lines = Array.from({ length: 28 }, () => "x");
     const d = diagnose(unclosed, "", source("A/a.tex", [...lines, "\\item\tRun the installer and pay $5 for it", "\\item\tTo add a new package"].join("\n")));
-    expect(summary(d)).toEqual(["A/a.tex:29 Math opened with `$` is never closed [\\item\tRun the installer and pay $5 for it]"]);
+    expect(summary(d)).toEqual(["A/a.tex:29 Math opened with `$` is never closed [\\item Run the installer and pay $5 for it]"]);
     expect(d.errors[0].hint).toContain("`\\$` for a dollar sign");
   });
 

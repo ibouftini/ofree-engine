@@ -4,11 +4,11 @@
 // remain, a last attempt builds through them, as Overleaf does, so there is
 // still a PDF.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { DocumentPlan, Engine } from "../plan/scan.js";
 import { pool, run, seconds } from "../util/exec.js";
-import { diagnose, toolErrors, type Diagnosis, type SourceContext } from "./diagnose.js";
+import { diagnose, missingFile, toolErrors, type Diagnosis, type SourceContext } from "./diagnose.js";
 import { parseLog, type LogFindings, type Missing } from "./logparse.js";
 
 export interface CompileOptions {
@@ -21,6 +21,8 @@ export interface CompileOptions {
   extraRc?: string;
   /** Build through LaTeX errors (latexmk -f, no -halt-on-error) when nothing else can be fixed. */
   keepGoing: boolean;
+  /** Where stand-ins for packages and input files that exist nowhere are written, one folder per document. */
+  stubDir?: string;
 }
 
 /**
@@ -123,7 +125,21 @@ const ENGINE_ARGS: Record<Engine, string[]> = {
   uplatex: dviRoute("uplatex", "upbibtex", "upmendex"),
 };
 const ENGINE_NAME: Record<Engine, string> = { pdflatex: "pdfLaTeX", xelatex: "XeLaTeX", lualatex: "LuaLaTeX", platex: "pLaTeX", uplatex: "upLaTeX" };
-const MAX_ROUNDS = 8;
+const MAX_ROUNDS = 12;
+
+/**
+ * A stand-in for a package or input file that exists nowhere, in `dir`. TeX
+ * stops at such a file, which would leave no PDF and hide every later error.
+ * Returns false for what cannot be replaced: a class, or a path outside `dir`.
+ */
+export function writeStub(dir: string, name: string): boolean {
+  if (!/\.(sty|tex)$/.test(name) || isAbsolute(name) || name.split(/[\\/]/).includes("..")) return false;
+  const path = join(dir, name);
+  mkdirSync(dirname(path), { recursive: true });
+  const provides = `\\ProvidesPackage{${basename(name, ".sty")}}[2000/01/01 Stand-in written by ofree-engine: the real package was not found]`;
+  writeFileSync(path, name.endsWith(".sty") ? `${provides}\n\\DeclareOption*{}\n\\ProcessOptions\\relax\n` : "% Stand-in written by ofree-engine: the real file was not found.\n");
+  return true;
+}
 
 async function attempt(
   workspace: string,
@@ -179,7 +195,10 @@ async function attempt(
 export function similarFiles(dir: string, name: string): string[] {
   const want = name.replace(/^\.\//, "").toLowerCase();
   const stem = (p: string) => p.replace(/\.[^./]+$/, "");
+  // "minion_final" for minion.eps: one name starting with the other, not short enough to be chance.
+  const isCloseName = (a: string, b: string) => Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a));
   const out: string[] = [];
+  const close: string[] = [];
   let seen = 0;
   const walk = (d: string, depth: number) => {
     for (const e of readdirSync(d, { withFileTypes: true })) {
@@ -192,11 +211,12 @@ export function similarFiles(dir: string, name: string): string[] {
       }
       const rel = relative(dir, full);
       const l = rel.toLowerCase();
-      if (rel !== name && (l === want || stem(l) === stem(want) || basename(l) === basename(want))) out.push(rel);
+      if (rel !== name && (l === want || basename(stem(l)) === basename(stem(want)) || basename(l) === basename(want))) out.push(rel);
+      else if (isCloseName(basename(stem(l)), basename(stem(want)))) close.push(rel);
     }
   };
   walk(dir, 0);
-  return out;
+  return out.length ? out : close.slice(0, 3);
 }
 
 export async function compileDocument(
@@ -219,10 +239,16 @@ export async function compileDocument(
   let last!: Awaited<ReturnType<typeof attempt>>;
   let findings!: LogFindings;
   let rounds = 0;
+  const stubs = new Set<string>();
+  const stubDir = opts.stubDir && join(opts.stubDir, doc.root.replace(/\W+/g, "-"));
+  const attemptEnv = () => {
+    const e = env();
+    return stubs.size ? { ...e, TEXINPUTS: [stubDir, e.TEXINPUTS ?? ""].join(delimiter) } : e;
+  };
 
   while (rounds < MAX_ROUNDS) {
     rounds++;
-    last = await attempt(workspace, doc, engine, shellEscape, force, keepGoing, opts, env());
+    last = await attempt(workspace, doc, engine, shellEscape, force, keepGoing, opts, attemptEnv());
     findings = parseLog(last.output);
     opts.log?.(
       `${doc.root}: attempt ${rounds} with ${ENGINE_NAME[engine]}${shellEscape ? " (shell escape)" : ""}${keepGoing ? " (through errors)" : ""}: exit ${last.code}, ` +
@@ -278,6 +304,18 @@ export async function compileDocument(
       force = true;
       continue;
     }
+    // Only the missing file stops TeX now: build without it. It stays an error, reported below.
+    if (keepGoing && stubDir) {
+      const absent = findings.missing.filter((m) => m.kind === "file" && !stubs.has(m.name)).map((m) => m.name);
+      if (stubs.size === 0 && absent.length) rmSync(stubDir, { recursive: true, force: true });
+      const written = absent.filter((name) => writeStub(stubDir, name));
+      if (written.length) {
+        for (const name of written) stubs.add(name);
+        notes.push(`Built without ${written.join(", ")}, which cannot be found`);
+        force = true;
+        continue;
+      }
+    }
     break;
   }
 
@@ -304,7 +342,8 @@ export async function compileDocument(
   };
   const diagnosis = diagnose(last.log ?? last.runOutput, last.blg ?? "", context, inProject);
   diagnosis.errors.push(...toolErrors(last.runOutput, diagnosis.errors.length));
-  const status = last.pdf && last.code === 0 ? "ok" : last.pdf && keepGoing ? "errors" : "failed";
+  diagnosis.errors.unshift(...[...stubs].map((name) => missingFile(name, context)));
+  const status = last.pdf && last.code === 0 && stubs.size === 0 ? "ok" : last.pdf && keepGoing ? "errors" : "failed";
   if (status === "errors") notes.push("Built through LaTeX errors, as Overleaf does");
 
   return {
