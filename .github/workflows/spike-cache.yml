@@ -79,3 +79,28 @@ jobs:
           cache: false
           upload: false
           on_error: warn
+
+  kanji:
+    name: kanji maps on a first install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        continue-on-error: true
+        with:
+          working_directory: test/fixtures/japanese-class
+          cache: false
+          upload: false
+      - name: State of the maps
+        run: |
+          T=~/.ofree/texlive; export PATH=$T/bin/x86_64-linux:$PATH
+          cd test/fixtures/japanese-class
+          echo "--- map dir"; ls -la $T/texmf-var/fonts/map/dvipdfmx/updmap/ || true
+          echo "--- kanjix entries"; wc -l $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map || true; grep -c '^uprml-h' $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map || true
+          echo "--- kpsewhich"; kpsewhich kanjix.map; kpsewhich uptex-haranoaji.map; kpsewhich ptex-haranoaji.map; kpsewhich -progname=dvipdfmx -format=map kanjix.map; kpsewhich -progname=dvipdfmx dvipdfmx.cfg
+          echo "--- updmap.cfg"; grep -n -i "kanji\|jaEmbed" $T/texmf-dist/web2c/updmap.cfg | head -20
+          echo "--- texmf-config"; ls -la $T/texmf-config/web2c/ 2>/dev/null; cat $T/texmf-config/web2c/updmap.cfg 2>/dev/null | head
+          echo "--- ls-R var"; ls -la $T/texmf-var/ls-R; grep -c kanjix $T/texmf-var/ls-R || true
+          echo "--- updmap again"; updmap-sys 2>&1 | tail -15
+          echo "--- after"; wc -l $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map; grep -c '^uprml-h' $T/texmf-var/fonts/map/dvipdfmx/updmap/kanjix.map; grep -c kanjix $T/texmf-var/ls-R || true
+          echo "--- compile again"; uplatex -interaction=nonstopmode report.tex >/dev/null; dvipdfmx report.dvi 2>&1 | tail -5; ls -la report.pdf || true
