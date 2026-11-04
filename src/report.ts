@@ -42,9 +42,12 @@ function sourceLink(path: string, line?: number): string {
   return server && repo && sha ? `[${label}](${server}/${repo}/blob/${sha}/${path}${line ? `#L${line}` : ""})` : label;
 }
 
+/** TeX quotes as `name'; in Markdown the lone backtick would open a code span and swallow what follows. */
+const texQuotes = (s: string) => s.replace(/`([^`'\n]*)'/g, "`$1`");
+
 /** "Undefined control sequence: `\foo`" or "Missing $ inserted, near `x^`". */
 function describe(e: Issue): string {
-  const message = e.message.replace(/\.$/, "");
+  const message = texQuotes(e.message.replace(/\.$/, ""));
   if (!e.culprit) return message;
   return /^Undefined control sequence|Environment/.test(e.message) ? `${message}: ${code(e.culprit)}` : `${message}, near ${code(e.culprit)}`;
 }
@@ -125,7 +128,7 @@ function documentSection(r: DocumentResult, prefix: string): string[] {
     if (r.status === "ok") lines.push(`### ${code(r.doc.root)}: built, with warnings`, "");
     lines.push(...notes.map((x) => `- ${x}`), "");
   }
-  const other = [...d.warnings.map(esc)];
+  const other = d.warnings.map((w) => esc(texQuotes(w)));
   if (d.overfull + d.underfull) other.push(`${d.overfull} overfull and ${d.underfull} underfull boxes (text sticking out of, or spread across, a line)`);
   if (other.length) lines.push(`<details><summary>Other warnings in ${code(r.doc.root)} (${other.length})</summary>`, "", ...other.map((w) => `- ${w}`), "", "</details>", "");
   return lines;

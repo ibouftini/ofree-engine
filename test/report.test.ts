@@ -73,6 +73,21 @@ describe("summary", () => {
     expect(summaryMarkdown({ ...facts(r), onError: "warn" })).not.toContain("on_error");
   });
 
+  it("turns TeX's quotes into code, so that a backtick does not swallow what follows", () => {
+    const r = result("", null);
+    r.status = "errors";
+    r.diagnosis = {
+      ...r.diagnosis,
+      errors: [{ message: "File `nosuch.sty' not found.", lines: [1], file: "main.tex", hint: "No package provides `nosuch.sty`." }, { message: "Undefined control sequence.", culprit: "\\foo", lines: [2], file: "main.tex" }],
+      warnings: ["Font `x' is odd"],
+    };
+    const s = summaryMarkdown(facts(r));
+    expect(s).toContain("**File `nosuch.sty` not found**");
+    expect(s).toContain("**Undefined control sequence: `\\foo`**");
+    expect(s).toContain("Font `x` is odd");
+    expect(digestText(r, "")).toContain("File `nosuch.sty` not found");
+  });
+
   it("uses the singular for one PDF", () => {
     expect(summaryMarkdown(facts(result("", null)))).toContain("## ✅ Your PDF is ready");
   });
