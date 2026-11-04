@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentResult } from "../src/compile/compile.js";
 import { digestText, summaryMarkdown, type RunFacts } from "../src/report.js";
 
@@ -25,6 +25,13 @@ const facts = (r: DocumentResult, fonts: RunFacts["fonts"] = []): RunFacts => ({
 });
 
 describe("summary", () => {
+  // On a runner these turn file names into links.
+  beforeEach(() => {
+    vi.stubEnv("GITHUB_SERVER_URL", "");
+    vi.stubEnv("GITHUB_REPOSITORY", "");
+    vi.stubEnv("GITHUB_SHA", "");
+  });
+
   it("names the bibliography tool that ran, not only the one the sources suggest", () => {
     expect(summaryMarkdown(facts(result("Latexmk: stuff\nRunning 'bibtex  \"main.aux\"'\n", "biber")))).toContain("bibliography: bibtex");
     expect(summaryMarkdown(facts(result("Running 'upbibtex  \"main\"'\n", "bibtex")))).toContain("bibliography: upbibtex");
@@ -48,6 +55,15 @@ describe("summary", () => {
     expect(s).toContain("TeX stopped at this error, so the rest of the document was not checked. Fixing it may show more errors, and there is no PDF until then.");
     expect(s).toContain("Stopped after 1.0 s");
     expect(digestText(r, "")).toContain("Smith (not in the .bib files) at Ch/c.tex:42, Ch/d.tex:7");
+  });
+
+  it("links those places on a runner", () => {
+    vi.stubEnv("GITHUB_SERVER_URL", "https://github.com");
+    vi.stubEnv("GITHUB_REPOSITORY", "o/r");
+    vi.stubEnv("GITHUB_SHA", "abc");
+    const r = result("", null);
+    r.diagnosis = { ...r.diagnosis, references: [{ key: "sec:x", lines: [49], places: [{ file: "Ch/c.tex", line: 49 }] }] };
+    expect(summaryMarkdown(facts(r))).toContain("`sec:x` at [`Ch/c.tex:49`](https://github.com/o/r/blob/abc/Ch/c.tex#L49)");
   });
 
   it("uses the singular for one PDF", () => {
