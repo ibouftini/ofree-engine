@@ -17,7 +17,7 @@ inputs:
     description: Build program. latexmk is the only one with automatic recovery.
     default: latexmk
   args:
-    description: Arguments for the build program. Default - -interaction=nonstopmode -file-line-error -halt-on-error.
+    description: Arguments for the build program. Default - -interaction=nonstopmode -file-line-error -halt-on-error, with which a document with errors is built again through them. Setting -halt-on-error yourself stops at the first error.
   latexmk_use_xelatex:
     description: Force XeLaTeX for every document.
     default: "false"
@@ -47,7 +47,7 @@ inputs:
     description: fail (default) or warn. LaTeX errors never stop the build; with fail the step fails, with warn it passes as long as a PDF was built. The PDF is uploaded either way.
     default: fail
   continue_on_error:
-    description: Accepted for compatibility. Every document is always built; the step fails if any fails.
+    description: Accepted for compatibility. Every document is always built; on_error and the main document decide whether the step fails.
     default: "false"
   texlive_version:
     description: Accepted for compatibility; the current TeX Live is used.

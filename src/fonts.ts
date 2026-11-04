@@ -303,7 +303,8 @@ export class Fonts {
       this.log(`Font "${name}": using ${substitute}`);
       return { name, source: "substitute", family: substitute, note: SUBSTITUTES[key] ? METRIC_NOTE : CLOSE_NOTE };
     }
-    this.log(`Font "${name}": not in TeX Live, the repository, Google Fonts or Microsoft's core fonts`);
+    // TeX may still find it under another name; if it cannot, compiling says so (see lastResort).
+    this.log(`Font "${name}": no family or file of that name in TeX Live, the repository, Google Fonts or Microsoft's core fonts`);
     return { name, source: "missing" };
   }
 

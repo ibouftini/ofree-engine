@@ -6,6 +6,8 @@ Fast, zero-configuration LaTeX builds on GitHub Actions.
 
 ## Use
 
+Save this as `.github/workflows/latex.yml` in your repository and push it:
+
 ```yaml
 on: [push, pull_request]
 jobs:
@@ -16,7 +18,9 @@ jobs:
       - uses: ibouftini/ofree-engine@main
 ```
 
-Nothing else is needed. The action:
+Nothing else is needed. Your PDF is in the repository's **Actions** tab: open the run, then download the `pdf` artifact from its summary page. The same page explains any errors.
+
+The action:
 
 - **Finds the documents itself:** every `.tex` file with `\documentclass` that no other file includes, and tells the main one from drafts and figures (see below).
 - **Picks the engine** (pdfLaTeX, XeLaTeX, LuaLaTeX, or pLaTeX and upLaTeX for Japanese) from `% !TeX program`, `.latexmkrc`, the class or the packages used, and says why. A `.latexmkrc` keeps its own route (upLaTeX then dvipdfmx, for example).
@@ -66,12 +70,16 @@ Change the `uses:` line. Its inputs (`root_file`, `working_directory`, `latexmk_
 
 | Input | Default | Meaning |
 |---|---|---|
+| `root_file` | found automatically | The documents to build, one per line; globs work |
+| `working_directory` | repository root | Where to look for documents |
+| `args` | | Arguments for latexmk, replacing the defaults |
 | `on_error` | `fail` | With `fail`, LaTeX errors fail the step (the PDF is still uploaded); with `warn`, the step passes when a PDF was built |
 | `microsoft_fonts` | `true` | Download Microsoft's core fonts when a document uses one; `false` uses metric-compatible free fonts (Tinos for Times New Roman, Arimo for Arial, …) |
 | `shell_escape` | `auto` | `auto` enables it only for documents that need it (minted, svg, …); `always`; `never` |
 | `extra_packages` | | TeX Live packages to add to the ones found automatically |
+| `extra_fonts` | | Font files outside the repository's folders to use too; globs work |
 | `cache` | `true` | Reuse TeX Live across runs |
-| `keep_warm` | `false` | Only keep the cached TeX Live alive, without compiling (see below) |
+| `keep_warm` | `false` | Only keep the cached TeX Live alive, without compiling (see [Keeping the cache warm](#keeping-the-cache-warm)) |
 | `upload` | `true` | Upload the PDFs as a workflow artifact |
 | `artifact_name` | `pdf` | Name of that artifact |
 
@@ -131,7 +139,7 @@ On the samples in [`bench/samples`](bench/samples), build step only (one run, 20
 
 In this action's output, the glossary, acronyms and nomenclature are filled in, the book's references, index and lists resolve, and the overlay frame becomes two pages. latexmk does not run the glossary and nomenclature tools by itself; this action adds those rules. `xu-cheng/latex-action` fails `errors` by design, as it stops at the first error.
 
-A first run here spends about 11 s installing about 150 packages, 7 s building formats and font indexes, and the rest compiling.
+On these samples, a first run spends about 11 s installing about 150 packages, 7 s building formats and font indexes, and the rest compiling. Larger documents need more: a 41-page thesis class took 24 s for 259 packages.
 
 ## Development
 

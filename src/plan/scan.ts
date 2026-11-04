@@ -273,7 +273,117 @@ export function japaneseEngine(cls: string, options: string[]): Engine | null {
 const LUA_SIGNALS = ["luacode", "luatexja", "luatexja-fontspec", "luatexja-preset", "luamplib", "lua-visual-debug", "luaotfload", "tikz-feynman", "emoji", "lua-ul", "pyluatex", "ltjsarticle", "ltjsbook", "ltjsreport", "ltjarticle", "ltjbook"];
 const XE_SIGNALS = ["fontspec", "polyglossia", "unicode-math", "xunicode", "xltxtra", "xeCJK", "xepersian", "bidi", "mathspec", "arabxetex", "xgreek", "ctex", "ctexart", "ctexbook", "ctexrep", "ctexbeamer", "fontawesome5-xe"];
 
+/** Conditionals that test the engine, with the engines they are true for. */
+const ENGINE_CONDITIONALS: Record<string, Engine[]> = {
+  ifxetex: ["xelatex"], ifXeTeX: ["xelatex"],
+  ifluatex: ["lualatex"], ifLuaTeX: ["lualatex"],
+  ifpdftex: ["pdflatex"], ifPDFTeX: ["pdflatex"],
+  ifpdf: ["pdflatex", "lualatex"],
+  iftutex: ["xelatex", "lualatex"], ifTUTeX: ["xelatex", "lualatex"], ifxetexorluatex: ["xelatex", "lualatex"],
+};
+
+/** Which branches of the sources count: "any" engine's, none of the engine tests' ("none"), or one engine's. */
+export interface Branches {
+  /** \newif flags nothing can turn on, without the "if". */
+  off: Set<string>;
+  engine: Engine | "any" | "none";
+}
+
+const CONDITIONAL_TOKEN = /\\(if[a-zA-Z@]*|else|fi)(?![a-zA-Z@])/g;
+const DEFINED_HERE = /\\(?:newif|let|def|gdef|edef|xdef|(?:re)?newcommand\*?\{?|providecommand\*?\{?)\s*$/;
+const TEX_PRIMITIVE = /^if(?:x|cat|num|dim|odd|vmode|hmode|mmode|inner|void|hbox|vbox|eof|true|false|case|defined|csname)?$/;
+// etoolbox's tests take arguments and have no \fi, as do others followed by "{" (\ifthenelse, \ifbool).
+const ETOOLBOX_TEST = /^if(?:(?:un)?def|cs(?:un)?def|(?:def|cs)(?:macro|param|prefix|protected|ltxprotect|empty|void|equal|string|strequal|counter|length|dimen))$/;
+
+/**
+ * Blanks the branches of conditionals that cannot run, keeping line numbers.
+ * Only tests decided by `branches` are evaluated. If the conditionals of the
+ * text do not balance (a test this cannot read, or one that spans files), it
+ * comes back as it is: a package kept in vain costs less than one dropped.
+ */
+export function liveText(text: string, branches: Branches): string {
+  const dead: [number, number][] = [];
+  // truth: true or false when decided, "neither" when both branches are skipped, null when unknown.
+  const stack: { truth: boolean | "neither" | null; inElse: boolean }[] = [];
+  const isDead = () => stack.some((f) => f.truth === "neither" || f.truth === f.inElse);
+  const declared = new Set([...text.matchAll(/\\newif\s*\\(if[a-zA-Z@]+)/g)].map((m) => m[1]));
+  let from = 0;
+  for (const m of text.matchAll(CONDITIONAL_TOKEN)) {
+    const name = m[1];
+    const end = m.index! + m[0].length;
+    if (DEFINED_HERE.test(text.slice(Math.max(0, m.index! - 30), m.index!))) continue;
+    const wasDead = isDead();
+    if (name === "fi") {
+      if (!stack.pop()) return text;
+    } else if (name === "else") {
+      if (!stack.length) return text;
+      stack[stack.length - 1].inElse = true;
+    } else {
+      const engines = ENGINE_CONDITIONALS[name];
+      let truth: boolean | "neither" | null = null;
+      if (engines && branches.engine !== "any") truth = branches.engine === "none" ? "neither" : engines.includes(branches.engine);
+      else if (name === "iffalse" || branches.off.has(name.slice(2))) truth = false;
+      const isConditional = engines || truth !== null || TEX_PRIMITIVE.test(name) || name.startsWith("if@") || declared.has(name);
+      const takesArguments = !isConditional && (ETOOLBOX_TEST.test(name) || /^\s*\{/.test(text.slice(end, end + 20)));
+      if (takesArguments) continue;
+      stack.push({ truth, inElse: false });
+    }
+    const nowDead = isDead();
+    if (!wasDead && nowDead) from = end;
+    if (wasDead && !nowDead) dead.push([from, m.index!]);
+  }
+  if (stack.length) return text;
+  let out = "";
+  let at = 0;
+  for (const [a, b] of dead) {
+    out += text.slice(at, a) + text.slice(a, b).replace(/[^\n]/g, " ");
+    at = b;
+  }
+  return out + text.slice(at);
+}
+
+/** Where the group opened at `open` closes, or the end of the text. */
+function groupEnd(text: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === "\\") i++;
+    else if (text[i] === "{") depth++;
+    else if (text[i] === "}" && --depth === 0) return i;
+  }
+  return text.length;
+}
+
+/**
+ * \newif flags nothing can turn on: every "<flag>true" sits in a \DeclareOption
+ * for an option no one passes. So \ifPHD@biblatex is false in a class whose
+ * biblatex option the document does not use. Any other way of setting a flag
+ * leaves it unknown, as do document class options TeX has to expand to read.
+ */
+export function offFlags(texts: string[]): Set<string> {
+  const all = texts.join("\n");
+  const off = new Set<string>();
+  const passed = new Set<string>();
+  const given = [...all.matchAll(/\\(?:documentclass|LoadClass|LoadClassWithOptions|usepackage|RequirePackage|RequirePackageWithOptions)\s*\[([^\]]*)\]/g)].map((m) => m[1]);
+  if ([...all.matchAll(/\\documentclass\s*\[([^\]]*)\]/g)].some((m) => m[1].includes("\\"))) return off;
+  const forwarded = [...all.matchAll(/\\(?:PassOptionsToClass|PassOptionsToPackage|ExecuteOptions)\s*\{([^}]*)\}/g)].map((m) => m[1]);
+  for (const l of [...given, ...forwarded]) for (const o of splitNames(l)) passed.add(o);
+  const unused: [number, number][] = [];
+  for (const m of all.matchAll(/\\DeclareOption\s*\{([^}]*)\}\s*\{/g)) {
+    if (!passed.has(m[1].trim())) unused.push([m.index!, groupEnd(all, m.index! + m[0].length - 1)]);
+  }
+  for (const m of all.matchAll(/\\newif\s*\\if([a-zA-Z@]+)/g)) {
+    const flag = m[1];
+    if (off.has(flag) || `if${flag}` in ENGINE_CONDITIONALS) continue;
+    const name = flag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const setters = [...all.matchAll(new RegExp(`(?<![a-zA-Z@])${name}true(?![a-zA-Z@])`, "g"))];
+    const other = new RegExp(`\\\\(?:let|def|gdef)\\s*\\\\if${name}(?![a-zA-Z@])|\\\\setboolean\\s*\\{${name}\\}`).test(all);
+    if (!other && setters.every((s) => unused.some(([a, b]) => s.index! > a && s.index! < b))) off.add(flag);
+  }
+  return off;
+}
+
 interface Accumulator {
+  branches: Branches;
   requires: Map<string, Ref>;
   languages: Map<string, Ref>;
   locales: Map<string, Ref>;
@@ -339,6 +449,17 @@ const BIBLATEX_STANDARD_STYLES = new Set([
   "verbose-inote", "verbose-trad1", "verbose-trad2", "verbose-trad3", "reading", "draft", "debug", "standard",
 ]);
 
+/**
+ * With Extension, fontspec's name is a file, not a family: XITS with
+ * UprightFont = *-Regular and Extension = .otf is XITS-Regular.otf.
+ */
+export function fontFileName(font: string, options: string): string {
+  const extension = /\bExtension\s*=\s*\{?\s*(\.\w+)/.exec(options)?.[1];
+  if (!extension) return font;
+  const upright = /\bUprightFont\s*=\s*\{?\s*([^,}\s]+)/.exec(options)?.[1];
+  return (upright?.replace("*", font) ?? font) + extension;
+}
+
 function scanText(
   acc: Accumulator,
   workspace: string,
@@ -352,7 +473,7 @@ function scanText(
     const engine = engineFromName(directive[1]);
     if (engine) acc.directive = { engine, ref: { file: fileRel, line: lineOf(raw, directive.index) } };
   }
-  const text = stripComments(raw);
+  const text = liveText(stripComments(raw), acc.branches);
   const ref = (index: number): Ref => ({ file: fileRel, line: lineOf(text, index) });
 
   const pkgRe = /\\(?:usepackage|RequirePackage|RequirePackageWithOptions)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}/g;
@@ -469,16 +590,17 @@ function scanText(
   for (const m of text.matchAll(/\\babelprovide\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
     for (const lang of splitNames(m[1])) if (/^[A-Za-z-]+$/.test(lang)) addOnce(acc.locales, lang.toLowerCase(), ref(m.index!));
   }
+  // Each with its options, before or after the name.
   const fontRes = [
-    /\\set(?:CJK)?(?:main|sans|mono|math)font\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
-    /\\(?:new|renew|provide|set)font(?:family|face)\s*\{?\\[A-Za-z@]+\}?\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
-    /\\fontspec\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
-    /\\babelfont\s*(?:\[[^\]]*\])?\s*\{[^}]+\}\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g,
+    /\\set(?:CJK)?(?:main|sans|mono|math)font\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}(?:\s*\[([^\]]*)\])?/g,
+    /\\(?:new|renew|provide|set)font(?:family|face)\s*\{?\\[A-Za-z@]+\}?\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}(?:\s*\[([^\]]*)\])?/g,
+    /\\fontspec\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}(?:\s*\[([^\]]*)\])?/g,
+    /\\babelfont\s*(?:\[[^\]]*\])?\s*\{[^}]+\}\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}(?:\s*\[([^\]]*)\])?/g,
   ];
   for (const re of fontRes) {
     for (const m of text.matchAll(re)) {
-      const font = m[1].trim();
-      if (font && !font.includes("\\")) addOnce(acc.fonts, font, ref(m.index!));
+      const font = m[2].trim();
+      if (font && !font.includes("\\")) addOnce(acc.fonts, fontFileName(font, `${m[1] ?? ""},${m[3] ?? ""}`), ref(m.index!));
     }
   }
   if (!acc.shellEscape) {
@@ -577,6 +699,27 @@ function rcPrograms(rc: Latexmkrc | null, engine: Engine, bibTool: DocumentPlan[
   return out;
 }
 
+/** Engine: explicit input > % !TeX program > .latexmkrc > packages and commands > pdfLaTeX. */
+function chooseEngine(acc: Accumulator, rc: Latexmkrc | null, forced?: Engine): Pick<DocumentPlan, "engine" | "engineReason" | "engineFromLatexmkrc"> {
+  const fmt = (r: Ref) => `${r.file}:${r.line}`;
+  const ja = acc.classes.map((c) => ({ c, engine: japaneseEngine(c.name, c.options) })).find((x) => x.engine);
+  const lua = LUA_SIGNALS.find((p) => acc.packages.has(p));
+  const xe = XE_SIGNALS.find((p) => acc.packages.has(p));
+  const found = (engine: Engine, engineReason: string, engineFromLatexmkrc = false) => ({ engine, engineReason, engineFromLatexmkrc });
+  if (forced) return found(forced, "set in the workflow");
+  if (acc.directive) return found(acc.directive.engine, `% !TeX program (${fmt(acc.directive.ref)})`);
+  if (rc?.engine) return found(rc.engine, rc.file, true);
+  if (lua) return found("lualatex", `${lua} (${fmt(acc.packages.get(lua)!)})`);
+  if (acc.luaFeature) return found("lualatex", `${acc.luaFeature.reason} (${fmt(acc.luaFeature.ref)})`);
+  if (ja) return found(ja.engine!, `${ja.c.name}${ja.c.options.includes(ja.engine!) ? ` [${ja.engine}]` : ""} (${fmt(ja.c.ref)})`);
+  if (xe) return found("xelatex", `${xe} (${fmt(acc.packages.get(xe)!)})`);
+  if (acc.fonts.size > 0) {
+    const [font, r] = [...acc.fonts][0];
+    return found("xelatex", `font "${font}" (${fmt(r)})`);
+  }
+  return found("pdflatex", "default");
+}
+
 export interface PlanOptions {
   /** Force an engine for every document (compatibility inputs). */
   engine?: Engine;
@@ -587,70 +730,56 @@ export interface PlanOptions {
 export function planDocument(workspace: string, root: string, opts: PlanOptions = {}): DocumentPlan {
   const cwdRel = opts.cwd ?? dirname(root);
   const cwdAbs = resolve(workspace, cwdRel);
-  const acc: Accumulator = {
-    requires: new Map(),
-    languages: new Map(),
-    locales: new Map(),
-    fonts: new Map(),
-    packages: new Map(),
-    directive: null,
-    classes: [],
-    luaFeature: null,
-    babelBidi: null,
-    babelFont: null,
-    biblatex: null,
-    bibtex: null,
-    shellEscape: null,
-    hasEps: null,
-    systemPrograms: new Map(),
-    ctexWindows: null,
-    graphicsPaths: [],
-    encodings: new Map(),
-    sources: [],
-    visited: new Set(),
+  const collect = (branches: Branches): Accumulator => {
+    const acc: Accumulator = {
+      branches,
+      requires: new Map(),
+      languages: new Map(),
+      locales: new Map(),
+      fonts: new Map(),
+      packages: new Map(),
+      directive: null,
+      classes: [],
+      luaFeature: null,
+      babelBidi: null,
+      babelFont: null,
+      biblatex: null,
+      bibtex: null,
+      shellEscape: null,
+      hasEps: null,
+      systemPrograms: new Map(),
+      ctexWindows: null,
+      graphicsPaths: [],
+      encodings: new Map(),
+      sources: [],
+      visited: new Set(),
+    };
+    visit(acc, workspace, cwdAbs, root, false);
+    absorbLocalFiles(acc, workspace, cwdAbs);
+    return acc;
   };
-  visit(acc, workspace, cwdAbs, root, false);
-  absorbLocalFiles(acc, workspace, cwdAbs);
+
+  // All the sources first, for the flags they can set. Then the engine: what
+  // holds whatever the engine decides; otherwise the sources support several,
+  // and the first Unicode engine whose branch needs it is chosen. The packages
+  // are those of that engine's branches.
+  const everything = collect({ off: new Set(), engine: "any" });
+  const off = offFlags(everything.sources.map((f) => stripComments(readFileSync(join(workspace, f), "utf8"))));
+  const rc = readLatexmkrc(cwdAbs);
+  let choice = chooseEngine(collect({ off, engine: "none" }), rc, opts.engine);
+  if (choice.engineReason === "default") {
+    for (const branch of ["xelatex", "lualatex"] as const) {
+      const within = chooseEngine(collect({ off, engine: branch }), rc, opts.engine);
+      if (within.engineReason === "default") continue;
+      // fontspec in \ifluatex means LuaLaTeX, though on its own it says XeLaTeX.
+      choice = { ...within, engine: within.engine === "xelatex" ? branch : within.engine, engineReason: `${within.engineReason}; the sources support other engines too, and % !TeX program chooses one` };
+      break;
+    }
+  }
+  const { engine, engineReason, engineFromLatexmkrc } = choice;
+  const acc = collect({ off, engine });
   if (![...CM_REPLACEMENTS].some((p) => acc.packages.has(p))) {
     for (const [enc, r] of acc.encodings) addOnce(acc.requires, enc === "ts1" ? "cm-super-ts1.enc" : `cm-super-${enc}.enc`, r);
-  }
-
-  // Engine: explicit input > % !TeX program > .latexmkrc > packages and commands > pdfLaTeX.
-  let engine: Engine = "pdflatex";
-  let engineReason = "default";
-  let engineFromLatexmkrc = false;
-  const rc = readLatexmkrc(cwdAbs);
-  const rcEngine = rc?.engine ?? null;
-  const ja = acc.classes.map((c) => ({ c, engine: japaneseEngine(c.name, c.options) })).find((x) => x.engine);
-  const lua = LUA_SIGNALS.find((p) => acc.packages.has(p));
-  const xe = XE_SIGNALS.find((p) => acc.packages.has(p));
-  const fmt = (r: Ref) => `${r.file}:${r.line}`;
-  if (opts.engine) {
-    engine = opts.engine;
-    engineReason = "set in the workflow";
-  } else if (acc.directive) {
-    engine = acc.directive.engine;
-    engineReason = `% !TeX program (${fmt(acc.directive.ref)})`;
-  } else if (rcEngine) {
-    engine = rcEngine;
-    engineReason = rc!.file;
-    engineFromLatexmkrc = true;
-  } else if (lua) {
-    engine = "lualatex";
-    engineReason = `${lua} (${fmt(acc.packages.get(lua)!)})`;
-  } else if (acc.luaFeature) {
-    engine = "lualatex";
-    engineReason = `${acc.luaFeature.reason} (${fmt(acc.luaFeature.ref)})`;
-  } else if (ja) {
-    engine = ja.engine!;
-    engineReason = `${ja.c.name}${ja.c.options.includes(ja.engine!) ? ` [${ja.engine}]` : ""} (${fmt(ja.c.ref)})`;
-  } else if (xe) {
-    engine = "xelatex";
-    engineReason = `${xe} (${fmt(acc.packages.get(xe)!)})`;
-  } else if (acc.fonts.size > 0) {
-    const [font, r] = [...acc.fonts][0];
-    engine = "xelatex";
-    engineReason = `font "${font}" (${fmt(r)})`;
   }
 
   // Packages babel loads itself, depending on the engine. babel is in

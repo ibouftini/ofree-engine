@@ -113,6 +113,11 @@ function documentSection(r: DocumentResult, prefix: string): string[] {
   return lines;
 }
 
+/** The tool that ran, as latexmk reports it, or else the one the sources call for. */
+function bibliographyTool(r: DocumentResult): string | null {
+  return /^Running '(\S*bib\S*|biber)\b/m.exec(r.runOutput)?.[1] ?? r.doc.bibTool;
+}
+
 export function summaryMarkdown(f: RunFacts): string {
   // The headline is about the main documents; the others are listed below it.
   const mains = f.results.filter((r) => r.doc.main);
@@ -124,7 +129,7 @@ export function summaryMarkdown(f: RunFacts): string {
   if (failed.length === mains.length) lines.push(`## ❌ ${mains.length > 1 ? "No document could be built" : `${mains[0].doc.root} could not be built`}`);
   else if (failed.length) lines.push(`## ❌ ${failed.length} of ${mains.length} documents could not be built`);
   else if (withErrors.length) lines.push(`## ⚠️ PDF${mains.length > 1 ? "s" : ""} built, with LaTeX errors to fix`);
-  else lines.push(`## ✅ Your PDFs are ready`);
+  else lines.push(`## ✅ Your PDF${f.results.length > 1 ? "s are" : " is"} ready`);
   lines.push("");
   const othersFailed = f.results.filter((r) => !r.doc.main && r.status !== "ok");
   if (othersFailed.length) {
@@ -133,7 +138,7 @@ export function summaryMarkdown(f: RunFacts): string {
     lines.push(`Several documents were found and none is marked as the main one, so each must build. To build only one, set \`root_file\`, or start the files it includes with \`% !TeX root = main.tex\`.`, "");
   }
   lines.push(`Built in ${total.toFixed(1)} s (setting up TeX Live: ${(f.phases.provision ?? 0).toFixed(1)} s).` +
-    (f.artifactUrl ? ` [Download the PDFs](${f.artifactUrl})` : ""));
+    (f.artifactUrl ? ` [Download the PDF${f.results.length > 1 ? "s" : ""}](${f.artifactUrl})` : ""));
   lines.push("");
   lines.push("| Document | Engine | Pages | Result | Time |");
   lines.push("|---|---|---:|---|---:|");
@@ -157,7 +162,7 @@ export function summaryMarkdown(f: RunFacts): string {
   lines.push(`- Time: ${Object.entries(f.phases).map(([k, v]) => `${k} ${v.toFixed(1)} s`).join(" · ")}.`);
   for (const r of f.results) {
     const extra = [
-      r.doc.bibTool ? `bibliography: ${r.doc.bibTool}` : "",
+      bibliographyTool(r) ? `bibliography: ${bibliographyTool(r)}` : "",
       r.shellEscape ? `shell escape on${r.doc.shellEscape ? ` (${esc(r.doc.shellEscape.reason)}, ${r.doc.shellEscape.file}:${r.doc.shellEscape.line})` : ""}` : "",
       r.doc.languages.size + r.doc.locales.size ? `languages: ${[...new Set([...r.doc.languages.keys(), ...r.doc.locales.keys()])].join(", ")}` : "",
       r.attempts > 1 ? `${r.attempts} attempts` : "",
@@ -170,9 +175,10 @@ export function summaryMarkdown(f: RunFacts): string {
     google: "downloaded from Google Fonts",
     microsoft: "downloaded from Microsoft (core fonts for the web, under Microsoft's licence)",
     substitute: "replaced by a metric-compatible font",
-    missing: "not found anywhere",
+    missing: "",
   };
-  const fontsUsed = (f.fonts ?? []).map((x) => `${esc(x.name)} (${SOURCE[x.source]}${x.family ? `: ${esc(x.family)}` : ""})`);
+  // A name not found beforehand is no verdict: TeX may know it otherwise, and if it does not, the font is an error above.
+  const fontsUsed = (f.fonts ?? []).filter((x) => x.source !== "missing").map((x) => `${esc(x.name)} (${SOURCE[x.source]}${x.family ? `: ${esc(x.family)}` : ""})`);
   if (fontsUsed.length) lines.push(`- Fonts not in TeX Live: ${fontsUsed.join(", ")}.`);
   const provided = new Set((f.fonts ?? []).filter((x) => x.source !== "missing").map((x) => `font "${x.name}"`));
   const unresolved = (f.resolution?.unresolved ?? []).filter((u) => !provided.has(u.what));

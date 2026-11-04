@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { chooseMain, findRoots, japaneseEngine, listTexFiles, planDocument, stripComments } from "../src/plan/scan.js";
+import { chooseMain, findRoots, fontFileName, japaneseEngine, listTexFiles, liveText, offFlags, planDocument, stripComments } from "../src/plan/scan.js";
 
 const fx = (name: string) => join(import.meta.dirname, "fixtures", name);
 
@@ -158,5 +158,96 @@ describe("planDocument", () => {
     expect([...d.requires.keys()]).toEqual(expect.arrayContaining(["article.cls", "fontawesome5.sty", "fontspec.sty"]));
     expect(d.engine).toBe("xelatex");
     expect([...d.fonts.keys()]).toEqual(["Source Sans Pro"]);
+  });
+});
+
+describe("conditionals", () => {
+  const none = { off: new Set<string>(), engine: "any" as const };
+
+  it("blanks branches that cannot run, keeping lines", () => {
+    const text = "\\ifxetex\na\n\\else\nb\n\\fi\nc";
+    expect(liveText(text, { ...none, engine: "xelatex" }).split("\n").map((l) => l.trim())).toEqual(["\\ifxetex", "a", "\\else", "", "\\fi", "c"]);
+    expect(liveText(text, { ...none, engine: "pdflatex" }).split("\n").map((l) => l.trim())).toEqual(["\\ifxetex", "", "\\else", "b", "\\fi", "c"]);
+    expect(liveText(text, { ...none, engine: "none" }).split("\n").map((l) => l.trim())).toEqual(["\\ifxetex", "", "", "", "\\fi", "c"]);
+    expect(liveText(text, none)).toBe(text);
+  });
+
+  it("handles nesting, unknown tests, tests without \\fi, and definitions", () => {
+    const nested = liveText("\\ifflag \\ifnum1=1 a\\else b\\fi \\else c\\fi d", { off: new Set(["flag"]), engine: "any" });
+    expect(nested).not.toMatch(/[ab]\\/);
+    expect(nested).toContain("c");
+    expect(nested).toContain("d");
+    const etoolbox = "\\ifbool{y}{a}{b}\\ifdef\\z{c}{d}\\ifflag e\\fi f";
+    expect(liveText(etoolbox, { off: new Set(["flag"]), engine: "any" })).not.toContain(" e");
+    // Flags followed by a group, unlike \\ifbool{y}{a}{b}.
+    const group = { off: new Set(["flag"]), engine: "any" as const };
+    expect(liveText("\\newif\\ifmine \\ifmine{a}\\fi \\ifflag e\\fi", group)).not.toContain(" e");
+    expect(liveText("\\if@twoside{a}\\fi \\ifflag e\\fi", group)).not.toContain(" e");
+    // A flag that only looks like an etoolbox test.
+    expect(liveText("\\ifdefineAbstract x\\fi \\ifflag e\\fi", { off: new Set(["flag"]), engine: "any" })).toContain(" x");
+    expect(liveText("\\ifdefineAbstract x\\fi \\ifflag e\\fi", { off: new Set(["flag"]), engine: "any" })).not.toContain(" e");
+    const defined = "\\newif\\ifflag \\def\\ifother{} \\ifflag a\\fi b";
+    expect(liveText(defined, { off: new Set(["flag"]), engine: "any" })).not.toContain(" a");
+  });
+
+  it("leaves text alone when its conditionals do not balance", () => {
+    const off = { off: new Set(["flag"]), engine: "any" as const };
+    expect(liveText("\\ifflag a", off)).toBe("\\ifflag a");
+    expect(liveText("a\\fi \\ifflag b\\fi", off)).toBe("a\\fi \\ifflag b\\fi");
+  });
+
+  it("knows a flag is off only when nothing can turn it on", () => {
+    const cls = "\\newif\\ifa\\afalse\\DeclareOption{a}{\\ifb\\else\\atrue\\fi}\\newif\\ifb\\btrue\\newif\\ifc\\DeclareOption{c}{\\ctrue}\\newif\\ifd\\newif\\ife\\let\\ife\\iftrue";
+    expect([...offFlags([cls])].sort()).toEqual(["a", "c", "d"]);
+    expect([...offFlags(["\\documentclass[c]{x}", cls])].sort()).toEqual(["a", "d"]);
+    expect([...offFlags(["\\ExecuteOptions{a}", cls])].sort()).toEqual(["c", "d"]);
+    // Options TeX has to expand could be anything.
+    expect(offFlags(["\\documentclass[\\opts]{x}", cls]).size).toBe(0);
+  });
+
+  it("does not count what an unused class option loads", () => {
+    const d = planDocument(fx("conditionals"), "main.tex");
+    expect(d.bibTool).toBe("bibtex");
+    expect(d.requires.has("biblatex.sty")).toBe(false);
+    expect(d.requires.has("natbib.sty")).toBe(true);
+    expect(d.requires.has("neverloaded.sty")).toBe(false);
+    expect(d.requires.has("setsomewhere.sty")).toBe(true);
+    expect(d.requires.has("commentedout.sty")).toBe(false);
+  });
+
+  it("counts it when the option is used", () => {
+    const d = planDocument(fx("conditionals"), "withoption.tex");
+    expect(d.bibTool).toBe("biber");
+    expect(d.requires.has("biblatex.sty")).toBe(true);
+  });
+
+  it("says when the sources support several engines, and needs only the chosen one's packages", () => {
+    const d = planDocument(fx("conditionals"), "main.tex");
+    expect(d.engine).toBe("xelatex");
+    expect(d.engineReason).toMatch(/^fontspec \(portable\.cls:\d+\); the sources support other engines too/);
+    expect(d.requires.has("fontspec.sty")).toBe(true);
+    expect(d.requires.has("mathptmx.sty")).toBe(false);
+  });
+
+  it("takes the other branch when the engine is named", () => {
+    const d = planDocument(fx("conditionals"), "forced.tex");
+    expect(d.engine).toBe("pdflatex");
+    expect(d.requires.has("mathptmx.sty")).toBe(true);
+    expect(d.requires.has("fontspec.sty")).toBe(false);
+    expect(d.fonts.size).toBe(0);
+  });
+
+  it("chooses the engine whose branch needs it", () => {
+    const d = planDocument(fx("conditionals"), "lua.tex");
+    expect(d.engine).toBe("lualatex");
+    expect(d.requires.has("inputenc.sty")).toBe(false);
+  });
+
+  it("reads font files from Extension and UprightFont, before or after the name", () => {
+    const d = planDocument(fx("conditionals"), "main.tex");
+    expect([...d.fonts.keys()].sort()).toEqual(["XITS-Regular.otf", "XITSMath-Regular.otf"]);
+    expect(fontFileName("Roboto", "")).toBe("Roboto");
+    expect(fontFileName("Foo", "Path=fonts/, Extension={.ttf}")).toBe("Foo.ttf");
+    expect(fontFileName("Foo", "Extension=.otf,UprightFont=Foo-Book")).toBe("Foo-Book.otf");
   });
 });
