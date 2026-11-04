@@ -100,7 +100,8 @@ describe.skipIf(!real || !existsSync(real))("real texlive.tlpdb", () => {
   it("installs upLaTeX, its fonts and the programs a .latexmkrc names", () => {
     const doc = planDocument(join(import.meta.dirname, "fixtures", "japanese-rc"), "thesis.tex");
     const r = resolvePackages(db, index, arch, [doc]);
-    for (const p of ["uplatex", "uptex", "ptex-fontmaps", "haranoaji", "jsclasses"]) expect(r.packages.has(p), p).toBe(true);
+    for (const p of ["uplatex", "uptex", "ptex-fontmaps", "adobemapping", "haranoaji", "jsclasses"]) expect(r.packages.has(p), p).toBe(true);
+    expect(index.get("UniJIS2004-UTF16-H")).toBe("adobemapping");
     expect(r.packages.has("biber")).toBe(false);
     const cls = planDocument(join(import.meta.dirname, "fixtures", "japanese-class"), "report.tex");
     expect(resolvePackages(db, index, arch, [cls]).packages.has("upmendex")).toBe(true);

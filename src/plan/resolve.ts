@@ -145,9 +145,10 @@ export function resolvePackages(
     if (d.engine === "xelatex") want("xetex", `XeLaTeX: ${d.engineReason}`);
     if (d.bibTool === "biber") want("biber", "biblatex with Biber");
     if (d.bibTool === "bibtex") want("bibtex", "BibTeX");
-    // Japanese: the engine, the kanji font maps dvipdfmx reads, and the HaranoAji fonts they and LuaTeX-ja name.
+    // Japanese: the engine, the kanji font maps dvipdfmx reads, the CMaps it needs to use
+    // those fonts (no package declares them), and the HaranoAji fonts the maps and LuaTeX-ja name.
     if (d.engine === "platex" || d.engine === "uplatex") {
-      for (const p of [d.engine, "ptex-fontmaps", "haranoaji"]) want(p, `${d.engine === "platex" ? "pLaTeX" : "upLaTeX"}: ${d.engineReason}`);
+      for (const p of [d.engine, "ptex-fontmaps", "adobemapping", "haranoaji"]) want(p, `${d.engine === "platex" ? "pLaTeX" : "upLaTeX"}: ${d.engineReason}`);
       if (["makeidx.sty", "imakeidx.sty", "index.sty"].some((f) => d.requires.has(f))) want(d.engine === "platex" ? "mendexk" : "upmendex", "index (Japanese)");
     }
     const japaneseLua = [...d.requires.keys()].find((f) => /^(luatexja.*\.sty|ltj\w+\.cls|jlreq\.cls|bxjs\w+\.cls)$/.test(f));

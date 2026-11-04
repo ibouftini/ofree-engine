@@ -1,0 +1,10 @@
+% A Japanese article with uplatex, built through dvipdfmx: Mincho, bold Gothic, a
+% cross-reference and math, without a .latexmkrc.
+\documentclass[uplatex,dvipdfmx]{jsarticle}
+\begin{document}
+\section{はじめに}\label{sec:intro}
+日本語の文章です。\textbf{太字はゴシック体}になります。第\ref{sec:intro}節を参照。
+\begin{equation}
+  E = mc^2
+\end{equation}
+\end{document}

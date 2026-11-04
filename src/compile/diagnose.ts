@@ -205,8 +205,9 @@ export function toolErrors(output: string, texErrors: number): Issue[] {
   for (const m of output.matchAll(/^(x?dvipdfmx):fatal: (.+)$/gm)) {
     const before = output.slice(0, m.index);
     const font = [...before.matchAll(/Could not locate a virtual\/physical font for TFM "([^"]+)"/g)].pop()?.[1];
+    const cmap = [...before.matchAll(/Could not read encoding file: (\S+)/g)].pop()?.[1];
     const issue: Issue = { message: m[2].trim(), source: m[1], lines: [], culprit: font };
-    issue.hint = hintFor(issue, () => []);
+    issue.hint = cmap ? `dvipdfmx cannot read the character map \`${cmap}\` it needs for \`${font ?? "this font"}\`.` : hintFor(issue, () => []);
     if (!out.some((o) => o.message === issue.message && o.culprit === issue.culprit)) out.push(issue);
   }
   if (out.length === 0 && texErrors === 0) {

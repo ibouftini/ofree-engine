@@ -121,6 +121,10 @@ describe("parseLog", () => {
     expect(parseLog("! Undefined control sequence.").needsUpdate).toBe(false);
   });
 
+  it("reports a CMap dvipdfmx cannot read as a missing file", () => {
+    expect(parseLog("dvipdfmx:warning: Could not read encoding file: UniJIS2004-UTF16-H").missing).toContainEqual({ kind: "file", name: "UniJIS2004-UTF16-H" });
+  });
+
   it("reports a shared library a program needs", () => {
     const f = parseLog("asy: error while loading shared libraries: libglut.so.3: cannot open shared object file: No such file or directory");
     expect(f.missing).toContainEqual({ kind: "program", name: "libglut.so.3" });
