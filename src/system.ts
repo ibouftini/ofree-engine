@@ -75,7 +75,11 @@ export class SystemPrograms {
 
   /** Whether a program or shared library (libglut.so.3) is on this machine. */
   async has(name: string): Promise<boolean> {
-    if (/\.so(\.\d+)*$/.test(name)) return libraryListed((await run("ldconfig", ["-p"])).output, name);
+    if (/\.so(\.\d+)*$/.test(name)) {
+      // ldconfig lists a library under its own name, not a link to it; the loader also finds links in these folders.
+      if (["/lib", "/usr/lib", "/lib/x86_64-linux-gnu", "/usr/lib/x86_64-linux-gnu", "/lib/aarch64-linux-gnu", "/usr/lib/aarch64-linux-gnu"].some((d) => existsSync(join(d, name)))) return true;
+      return libraryListed((await run("ldconfig", ["-p"])).output, name);
+    }
     return (await run(name, ["--version"])).code === 0;
   }
 
